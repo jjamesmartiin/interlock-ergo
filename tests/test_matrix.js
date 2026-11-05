@@ -117,32 +117,13 @@ for (const b of ['left_choc', 'right_choc', 'left_mx', 'right_mx']) {
 console.log('✓ No fab package is published for a board that fails DRC.');
 
 // 7. Verify 3D STL models
-const requiredStls = [
-    'interlock_choc_left.stl',
-    'interlock_choc_right.stl',
-    'interlock_mx_left.stl',
-    'interlock_mx_right.stl',
-    'interlock_plate_choc_left.stl',
-    'interlock_plate_choc_right.stl',
-    'interlock_plate_mx_left.stl',
-    'interlock_plate_mx_right.stl',
-    'dongle_case.stl',
-    'dongle_case_base.stl',
-    'dongle_case_lid.stl'
-];
-for (const s of requiredStls) {
-    const stlPath = path.join(rootDir, 'cad/dist', s);
-    assert(fs.existsSync(stlPath), `Missing STL model: ${s}`);
-    const stat = fs.statSync(stlPath);
-    // geometry correctness is checked properly by tests/test_models.js; this only
-    // catches a zero-length export.
-    assert(stat.size > 2000, `STL ${s} is suspiciously small: ${stat.size} bytes`);
-}
-console.log('✓ Verified all 11 3D STL models are compiled and valid.');
+// The exported STLs are covered by tests/test_models.js (single watertight shell,
+// dimensions against the stackup). Keeping an existence check here as well only
+// made this suite depend on cad/dist/ existing, which it does not on a fresh clone.
 
 // 8. Verify ZMK West Manifest Pins Stable Revision
 const westYml = fs.readFileSync(path.join(rootDir, 'config/west.yml'), 'utf8');
 assert(westYml.includes('revision: v0.2'), 'west.yml should pin stable revision v0.2 for reproducible builds');
 console.log('✓ Verified west.yml pins stable release v0.2.');
 
-console.log('✓ ALL ADVERSARIAL RELEASE AUDIT CHECKS PASSED SUCCESSFULLY!');
+console.log('✓ ALL FIRMWARE / MATRIX / FAB-GATE CHECKS PASSED SUCCESSFULLY!');

@@ -1,33 +1,28 @@
-if SHIELD_INTERLOCK_ERGO_LEFT
+# Configuration defaults for Interlock Ergo shields
 
-config ZMK_KEYBOARD_NAME
-    default "Interlock Ergo (L)"
+if SHIELD_INTERLOCK_ERGO_LEFT || SHIELD_INTERLOCK_ERGO_RIGHT
 
-config ZMK_SPLIT_BLE_ROLE_PERIPHERAL
+config ZMK_SPLIT
     default y
 
-endif
-
-if SHIELD_INTERLOCK_ERGO_RIGHT
-
 config ZMK_KEYBOARD_NAME
-    default "Interlock Ergo (R)"
-
-config ZMK_SPLIT_BLE_ROLE_PERIPHERAL
-    default y
+    default "Interlock Ergo"
 
 endif
 
 if SHIELD_INTERLOCK_ERGO_DONGLE
 
-config ZMK_KEYBOARD_NAME
-    default "Interlock Ergo Dongle"
+config ZMK_SPLIT
+    default y
 
-config ZMK_SPLIT_BLE_ROLE_CENTRAL
+config ZMK_SPLIT_ROLE_CENTRAL
     default y
 
 config ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS
     default 2
+
+config ZMK_KEYBOARD_NAME
+    default "Interlock Ergo Dongle"
 
 config ZMK_USB
     default y

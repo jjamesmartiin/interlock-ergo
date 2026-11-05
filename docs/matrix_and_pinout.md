@@ -1,28 +1,32 @@
 # Matrix & Pinout Specifications
 
+Ground truth mapping verified against ZMK's Pro Micro devicetree definitions (`arduino_pro_micro_pins.dtsi`).
+
+---
+
 ## Left Half Pinout (Nice!Nano v2 / Pro Micro Footprint)
 
 The left half hosts a 5-row × 7-column matrix plus an EC11 rotary encoder.
 
 ### Row GPIOs (Col2Row, Active High / Pull-Down):
-- **Row 0:** `P0.17` (`&pro_micro 4`)
-- **Row 1:** `P0.20` (`&pro_micro 5`)
-- **Row 2:** `P0.22` (`&pro_micro 6`)
-- **Row 3:** `P0.24` (`&pro_micro 7`)
-- **Row 4:** `P1.00` (`&pro_micro 8`)
+- **Row 0:** `&pro_micro 4` -> `P0.22`
+- **Row 1:** `&pro_micro 5` -> `P0.24`
+- **Row 2:** `&pro_micro 6` -> `P1.00`
+- **Row 3:** `&pro_micro 7` -> `P0.11`
+- **Row 4:** `&pro_micro 8` -> `P1.04`
 
 ### Column GPIOs (Active High Drive):
-- **Col 0:** `P0.31` (`&pro_micro 18`) — Macro column (Encoder Click / M1, M2, M3, M4, M5)
-- **Col 1:** `P1.13` (`&pro_micro 15`) — Esc, Tab, Caps, LShift, LCtrl
-- **Col 2:** `P1.11` (`&pro_micro 14`) — 1, Q, A, Z, LGui
-- **Col 3:** `P0.10` (`&pro_micro 16`) — 2, W, S, X, LAlt
-- **Col 4:** `P0.09` (`&pro_micro 10`) — 3, E, D, C, Space_L
-- **Col 5:** `P0.02` (`&pro_micro 1`)  — 4, R, F, V
-- **Col 6:** `P1.15` (`&pro_micro 0`)  — 5, T, G, B, Fn/Mo(1)
+- **Col 0:** `&pro_micro 18` -> `P1.15` — Macro column (Encoder Click / M1, M2, M3, M4, M5)
+- **Col 1:** `&pro_micro 15` -> `P1.13` — Esc, Tab, Caps, LShift, LCtrl
+- **Col 2:** `&pro_micro 14` -> `P1.11` — 1, Q, A, Z, LGui
+- **Col 3:** `&pro_micro 16` -> `P0.10` — 2, W, S, X, LAlt
+- **Col 4:** `&pro_micro 10` -> `P0.09` — 3, E, D, C, Space_L
+- **Col 5:** `&pro_micro 1`  -> `P0.06` — 4, R, F, V
+- **Col 6:** `&pro_micro 0`  -> `P0.08` — 5, T, G, B, Fn/Mo(1)
 
 ### Rotary Encoder Pins:
-- **Pin A (Channel A):** `P0.29` (`&pro_micro 21`) (Pull-up)
-- **Pin B (Channel B):** `P0.02` / `P0.26` (`&pro_micro 20`) (Pull-up)
+- **Pin A (Channel A):** `&pro_micro 21` -> `P0.31` (Internal pull-up)
+- **Pin B (Channel B):** `&pro_micro 20` -> `P0.29` (Internal pull-up)
 - **Common Pin (C):** `GND`
 - **Push Button:** Wired to Row 0, Column 0 in the switch matrix.
 
@@ -33,28 +37,28 @@ The left half hosts a 5-row × 7-column matrix plus an EC11 rotary encoder.
 The right half hosts a 5-row × 9-column matrix.
 
 ### Row GPIOs:
-- **Row 0:** `P0.17` (`&pro_micro 4`)
-- **Row 1:** `P0.20` (`&pro_micro 5`)
-- **Row 2:** `P0.22` (`&pro_micro 6`)
-- **Row 3:** `P0.24` (`&pro_micro 7`)
-- **Row 4:** `P1.00` (`&pro_micro 8`)
+- **Row 0:** `&pro_micro 4` -> `P0.22`
+- **Row 1:** `&pro_micro 5` -> `P0.24`
+- **Row 2:** `&pro_micro 6` -> `P1.00`
+- **Row 3:** `&pro_micro 7` -> `P0.11`
+- **Row 4:** `&pro_micro 8` -> `P1.04`
 
-### Column GPIOs (Col Offset 7):
-- **Col 7:**  `P0.31` (`&pro_micro 18`) — **6, Y, H, N, Space_R**
-- **Col 8:**  `P1.13` (`&pro_micro 15`) — 7, U, J, M, RAlt
-- **Col 9:**  `P1.11` (`&pro_micro 14`) — 8, I, K, Comma, Mo(2)
-- **Col 10:** `P0.10` (`&pro_micro 16`) — 9, O, L, Dot, RCtrl
-- **Col 11:** `P0.09` (`&pro_micro 10`) — 0, P, Semicolon, Slash, Left Arrow
-- **Col 12:** `P0.02` (`&pro_micro 1`)  — Minus, [, Quote, RShift, Down Arrow
-- **Col 13:** `P1.15` (`&pro_micro 0`)  — Equal, ], Enter, Up Arrow, Right Arrow
-- **Col 14:** `P0.06` (`&pro_micro 2`)  — Backspace, Backslash, Delete
-- **Col 15:** `P0.08` (`&pro_micro 3`)  — Page Up, Page Down
+### Column GPIOs (Col Offset 7 assigned via `&default_transform`):
+- **Col 7:**  `&pro_micro 18` -> `P1.15` — **6, Y, H, N, Space_R** (Strictly Right Half)
+- **Col 8:**  `&pro_micro 15` -> `P1.13` — 7, U, J, M, RAlt
+- **Col 9:**  `&pro_micro 14` -> `P1.11` — 8, I, K, Comma, Mo(2)
+- **Col 10:** `&pro_micro 16` -> `P0.10` — 9, O, L, Dot, RCtrl
+- **Col 11:** `&pro_micro 10` -> `P0.09` — 0, P, Semicolon, Slash, Left Arrow
+- **Col 12:** `&pro_micro 1`  -> `P0.06` — Minus, [, Quote, RShift, Down Arrow
+- **Col 13:** `&pro_micro 0`  -> `P0.08` — Equal, ], Enter, Up Arrow, Right Arrow
+- **Col 14:** `&pro_micro 2`  -> `P0.17` — Backspace, Backslash, Delete
+- **Col 15:** `&pro_micro 3`  -> `P0.20` — Page Up, Page Down
 
 ---
 
-## USB Dongle Wiring
+## Power & Battery Circuit
 
-The USB dongle requires no key matrix:
-1. Connect nRF52840 (e.g. Seeed XIAO BLE) to USB.
-2. (Optional) Single tact switch between `RST` and `GND` for double-tap UF2 bootloader entry.
-3. Flash with `interlock_ergo_dongle` firmware.
+- **Battery Input:** 3.7V LiPo with integrated PCM (Protection Circuit Module).
+- **Power Switch:** SPDT mini slide switch (MSK-12D19) connected in series between LiPo positive terminal and nice!nano `B+` pad.
+- **Battery Negative:** Direct to nice!nano `B-` / `GND`.
+- **Battery Fuel Gauge:** nice!nano v2 measures cell voltage directly via internal VDDH (`zmk,battery-nrf-vddh`).

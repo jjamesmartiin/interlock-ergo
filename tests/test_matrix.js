@@ -2,31 +2,43 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 
-console.log('Running Interlock Ergo Matrix & Keymap Verification...');
+console.log('Running Interlock Ergo Adversarial-Grade Verification...');
 
-// 1. Read dtsi
-const dtsiContent = fs.readFileSync(path.join(__dirname, '../config/boards/shields/interlock_ergo/interlock_ergo.dtsi'), 'utf8');
+const shieldDir = path.join(__dirname, '../config/boards/shields/interlock_ergo');
+
+// 1. Verify dtsi & unique RC mapping
+const dtsiContent = fs.readFileSync(path.join(shieldDir, 'interlock_ergo.dtsi'), 'utf8');
 const rcMatches = dtsiContent.match(/RC\(\s*\d+\s*,\s*\d+\s*\)/g);
 assert(rcMatches, 'Failed to find RC entries in dtsi');
 const totalMatrixKeys = rcMatches.length;
-console.log(`Found ${totalMatrixKeys} matrix positions in default_transform.`);
 
-// Verify 6-Y-H-N column mapping:
-// In dtsi map, columns 0..6 are left, columns >= 7 are right.
-const rightEntries = rcMatches.filter(rc => {
-    const col = parseInt(rc.split(',')[1]);
-    return col >= 7;
-});
-const leftEntries = rcMatches.filter(rc => {
-    const col = parseInt(rc.split(',')[1]);
-    return col < 7;
-});
-console.log(`Left half matrix keys: ${leftEntries.length}, Right half matrix keys: ${rightEntries.length}`);
+// Check for duplicate RC coordinates
+const uniqueRCs = new Set(rcMatches.map(rc => rc.replace(/\s+/g, '')));
+assert.strictEqual(uniqueRCs.size, rcMatches.length, `Duplicate RC coordinate found in dtsi! (${uniqueRCs.size} unique vs ${rcMatches.length} total)`);
+console.log(`Found ${totalMatrixKeys} unique matrix positions in default_transform.`);
 
-// 2. Read keymap
-const keymapContent = fs.readFileSync(path.join(__dirname, '../config/boards/shields/interlock_ergo/interlock_ergo.keymap'), 'utf8');
+// 2. Verify Right Overlay has col-offset on &default_transform (NOT in kscan0)
+const rightOverlay = fs.readFileSync(path.join(shieldDir, 'interlock_ergo_right.overlay'), 'utf8');
+assert(!rightOverlay.includes('col-offset = <7>;\n        row-gpios') && !rightOverlay.match(/kscan0[\s\S]*?col-offset/),
+    'CRITICAL: col-offset MUST NOT be placed inside kscan0 (it is a matrix-transform property)');
+assert(rightOverlay.match(/&default_transform\s*\{[\s\S]*?col-offset\s*=\s*<7>;/),
+    'CRITICAL: col-offset = <7> must be assigned to &default_transform');
+console.log('✓ Verified col-offset = <7> is correctly attached to &default_transform.');
 
-// Parse layers
+// 3. Verify Kconfig.defconfig enables CONFIG_ZMK_SPLIT
+const defconfig = fs.readFileSync(path.join(shieldDir, 'Kconfig.defconfig'), 'utf8');
+assert(defconfig.includes('config ZMK_SPLIT\n    default y'), 'CRITICAL: CONFIG_ZMK_SPLIT must be explicitly enabled in Kconfig.defconfig');
+assert(defconfig.includes('config ZMK_SPLIT_ROLE_CENTRAL\n    default y'), 'CRITICAL: CONFIG_ZMK_SPLIT_ROLE_CENTRAL must be enabled for dongle');
+console.log('✓ Verified CONFIG_ZMK_SPLIT and central roles are active in Kconfig.defconfig.');
+
+// 4. Verify shield conf files exist and are correctly named
+assert(fs.existsSync(path.join(shieldDir, 'interlock_ergo_left.conf')), 'interlock_ergo_left.conf must exist');
+assert(fs.existsSync(path.join(shieldDir, 'interlock_ergo_right.conf')), 'interlock_ergo_right.conf must exist');
+assert(fs.existsSync(path.join(shieldDir, 'interlock_ergo_dongle.conf')), 'interlock_ergo_dongle.conf must exist');
+console.log('✓ Verified all three exact shield .conf files are present.');
+
+// 5. Verify Keymap Layers
+const keymapContent = fs.readFileSync(path.join(shieldDir, 'interlock_ergo.keymap'), 'utf8');
 const layerRegex = /(\w+_layer)\s*\{[\s\S]*?bindings\s*=\s*<([\s\S]*?)>;/g;
 let match;
 let layerCount = 0;
@@ -35,36 +47,27 @@ while ((match = layerRegex.exec(keymapContent)) !== null) {
     layerCount++;
     const layerName = match[1];
     const rawBindings = match[2];
-    
-    // Extract tokens starting with &
     const tokens = rawBindings.match(/&[a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)*/g) || [];
-    console.log(`Layer '${layerName}': ${tokens.length} keybindings parsed.`);
+    
     assert.strictEqual(tokens.length, totalMatrixKeys, 
         `Layer ${layerName} has ${tokens.length} keys, expected ${totalMatrixKeys}`);
 
     if (layerName === 'default_layer') {
-        // Find 6, Y, H, N keys
-        // Row 0 right starts with N6 (token index 7)
-        // Row 1 right starts with Y (token index 16 + 7 = 23)
-        // Row 2 right starts with H (token index 16 + 16 + 7 = 39)
-        // Row 3 right starts with N (token index 16 + 16 + 14 + 7 = 53)
         const key6 = tokens[7];
         const keyY = tokens[23];
         const keyH = tokens[39];
         const keyN = tokens[53];
 
-        console.log(`Right Column 7 Keys: R0='${key6}', R1='${keyY}', R2='${keyH}', R3='${keyN}'`);
         assert(key6.includes('N6'), `Expected &kp N6 at right col 7, got ${key6}`);
         assert(keyY.includes('Y'), `Expected &kp Y at right col 7, got ${keyY}`);
         assert(keyH.includes('H'), `Expected &kp H at right col 7, got ${keyH}`);
         assert(keyN.includes('N'), `Expected &kp N at right col 7, got ${keyN}`);
 
-        // Left column 6 should have 5, T, G, B
         const key5 = tokens[6];
         const keyT = tokens[22];
         const keyG = tokens[38];
         const keyB = tokens[52];
-        console.log(`Left Column 6 Keys: R0='${key5}', R1='${keyT}', R2='${keyG}', R3='${keyB}'`);
+
         assert(key5.includes('N5'), `Expected &kp N5 at left col 6, got ${key5}`);
         assert(keyT.includes('T'), `Expected &kp T at left col 6, got ${keyT}`);
         assert(keyG.includes('G'), `Expected &kp G at left col 6, got ${keyG}`);
@@ -73,4 +76,4 @@ while ((match = layerRegex.exec(keymapContent)) !== null) {
 }
 
 assert(layerCount >= 3, 'Expected at least 3 layers in keymap');
-console.log('✓ All matrix, keymap, and 6-Y-H-N assertions passed successfully!');
+console.log('✓ All adversarial tests passed: firmware splits, transforms, overlays, and 6YHN verified!');

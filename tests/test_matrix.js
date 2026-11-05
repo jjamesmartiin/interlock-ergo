@@ -4,7 +4,8 @@ const assert = require('assert');
 
 console.log('Running Interlock Ergo Adversarial-Grade Verification...');
 
-const shieldDir = path.join(__dirname, '../config/boards/shields/interlock_ergo');
+const rootDir = path.join(__dirname, '..');
+const shieldDir = path.join(rootDir, 'config/boards/shields/interlock_ergo');
 
 // 1. Verify dtsi & unique RC mapping
 const dtsiContent = fs.readFileSync(path.join(shieldDir, 'interlock_ergo.dtsi'), 'utf8');
@@ -15,6 +16,7 @@ const totalMatrixKeys = rcMatches.length;
 // Check for duplicate RC coordinates
 const uniqueRCs = new Set(rcMatches.map(rc => rc.replace(/\s+/g, '')));
 assert.strictEqual(uniqueRCs.size, rcMatches.length, `Duplicate RC coordinate found in dtsi! (${uniqueRCs.size} unique vs ${rcMatches.length} total)`);
+assert.strictEqual(totalMatrixKeys, 76, `Expected exactly 76 keys in dtsi, got ${totalMatrixKeys}`);
 console.log(`Found ${totalMatrixKeys} unique matrix positions in default_transform.`);
 
 // 2. Verify Right Overlay has col-offset on &default_transform (NOT in kscan0)
@@ -74,6 +76,46 @@ while ((match = layerRegex.exec(keymapContent)) !== null) {
         assert(keyB.includes('B'), `Expected &kp B at left col 6, got ${keyB}`);
     }
 }
-
 assert(layerCount >= 3, 'Expected at least 3 layers in keymap');
-console.log('✓ All adversarial tests passed: firmware splits, transforms, overlays, and 6YHN verified!');
+
+// 6. Verify Hardware & Fab Packages
+const requiredZips = [
+    'interlock_ergo_left_choc_gerbers.zip',
+    'interlock_ergo_right_choc_gerbers.zip',
+    'interlock_ergo_left_mx_gerbers.zip',
+    'interlock_ergo_right_mx_gerbers.zip'
+];
+for (const z of requiredZips) {
+    const zipPath = path.join(rootDir, 'pcb/dist', z);
+    assert(fs.existsSync(zipPath), `Missing Gerber zip package: ${z}`);
+    const stat = fs.statSync(zipPath);
+    assert(stat.size > 20000, `Gerber zip ${z} is suspiciously small: ${stat.size} bytes`);
+}
+console.log('✓ Verified all 4 JLCPCB Gerber packages are present and non-empty.');
+
+// 7. Verify 3D STL models
+const requiredStls = [
+    'interlock_choc_left.stl',
+    'interlock_choc_right.stl',
+    'interlock_mx_left.stl',
+    'interlock_mx_right.stl',
+    'interlock_plate_choc_left.stl',
+    'interlock_plate_choc_right.stl',
+    'interlock_plate_mx_left.stl',
+    'interlock_plate_mx_right.stl',
+    'dongle_case.stl'
+];
+for (const s of requiredStls) {
+    const stlPath = path.join(rootDir, 'cad/dist', s);
+    assert(fs.existsSync(stlPath), `Missing STL model: ${s}`);
+    const stat = fs.statSync(stlPath);
+    assert(stat.size > 10000, `STL ${s} is suspiciously small: ${stat.size} bytes`);
+}
+console.log('✓ Verified all 9 3D STL models are compiled and valid.');
+
+// 8. Verify ZMK West Manifest Pins Stable Revision
+const westYml = fs.readFileSync(path.join(rootDir, 'config/west.yml'), 'utf8');
+assert(westYml.includes('revision: v0.2'), 'west.yml should pin stable revision v0.2 for reproducible builds');
+console.log('✓ Verified west.yml pins stable release v0.2.');
+
+console.log('✓ ALL ADVERSARIAL RELEASE AUDIT CHECKS PASSED SUCCESSFULLY!');

@@ -1,7 +1,7 @@
 /*
  * Interlock Ergo Switch Plate - Cherry MX Standard Profile
- * Plate thickness: 1.5mm
- * Switch cutouts: 14.0mm x 14.0mm with 19.05mm X x 19.05mm Y pitch
+ * Plate thickness: 1.5mm (Standard MX latch thickness)
+ * Matches firmware switch matrix: 34 keys left (with encoder hole), 42 keys right.
  */
 
 include <interlock_params.scad>
@@ -25,6 +25,8 @@ module mx_plate_left() {
                 if (r == 0 && c == 0) {
                     translate([c * mx_pitch_x + mx_pitch_x * 0.5, (rows - 1 - r) * mx_pitch_y + mx_pitch_y * 0.5, -1])
                         cylinder(d = 7.5, h = mx_plate_thickness + 2);
+                } else if (r == 4 && c == 5) {
+                    // Skip omitted 2.25u space gap
                 } else {
                     translate([c * mx_pitch_x + (mx_pitch_x - mx_switch_cutout) * 0.5,
                                (rows - 1 - r) * mx_pitch_y + (mx_pitch_y - mx_switch_cutout) * 0.5,
@@ -42,10 +44,16 @@ module mx_plate_right() {
 
         for (r = [0 : rows - 1]) {
             for (c = [0 : cols_right - 1]) {
-                translate([c * mx_pitch_x + (mx_pitch_x - mx_switch_cutout) * 0.5,
-                           (rows - 1 - r) * mx_pitch_y + (mx_pitch_y - mx_switch_cutout) * 0.5,
-                           -1])
-                    cube([mx_switch_cutout, mx_switch_cutout, mx_plate_thickness + 2]);
+                if (r == 2 && (c == 7 || c == 8)) {
+                    // Home row terminates at Enter (7 keys)
+                } else if (r == 4 && c == 8) {
+                    // Bottom row terminates at 8 keys
+                } else {
+                    translate([c * mx_pitch_x + (mx_pitch_x - mx_switch_cutout) * 0.5,
+                               (rows - 1 - r) * mx_pitch_y + (mx_pitch_y - mx_switch_cutout) * 0.5,
+                               -1])
+                        cube([mx_switch_cutout, mx_switch_cutout, mx_plate_thickness + 2]);
+                }
             }
         }
     }

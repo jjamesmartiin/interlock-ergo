@@ -8,6 +8,22 @@ if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
 
 console.log('--- Generating Electrically-Verified Interlock Ergo KiCad PCBs ---');
 
+function getCmd(bin) {
+    try {
+        execSync(`command -v ${bin} >/dev/null 2>&1`);
+        return bin;
+    } catch {
+        try {
+            execSync('command -v nix-shell >/dev/null 2>&1');
+            return `nix-shell -p ${bin} --run ${bin}`;
+        } catch {
+            return bin;
+        }
+    }
+}
+
+const zipBin = getCmd('zip');
+
 function generateKiCadPCB(opts) {
     const { variant, side, cols, rows, pitchX, pitchY, isChoc } = opts;
     
@@ -496,7 +512,7 @@ function generateKiCadPCB(opts) {
     const zipName = `interlock_ergo_${side}_${variant}_gerbers.zip`;
     const zipPath = path.join(distDir, zipName);
     if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
-    execSync(`cd "${gerberSubdir}" && nix-shell -p zip --run "zip -q '${zipPath}' *"`);
+    execSync(`cd "${gerberSubdir}" && ${zipBin} -q '${zipPath}' *`);
     const zipStat = fs.statSync(zipPath);
     console.log(`  -> JLCPCB Gerber Package: ${zipName} (${(zipStat.size / 1024).toFixed(1)} KB)`);
 

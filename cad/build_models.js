@@ -59,12 +59,28 @@ const targets = [
     }
 ];
 
+function getCmd(bin) {
+    try {
+        execSync(`command -v ${bin} >/dev/null 2>&1`);
+        return bin;
+    } catch {
+        try {
+            execSync('command -v nix-shell >/dev/null 2>&1');
+            return `nix-shell -p ${bin} --run ${bin}`;
+        } catch {
+            return bin;
+        }
+    }
+}
+
+const openscadBin = getCmd('openscad');
+
 for (const t of targets) {
     const outFile = path.join(distDir, t.name);
     const inFile = path.join(cadDir, t.file);
-    const defArg = t.mode ? `-D 'mode=\\"${t.mode}\\"'` : '';
+    const defArg = t.mode ? `-D mode="${t.mode}"` : '';
     console.log(`Generating ${t.name}...`);
-    const cmd = `nix-shell -p openscad --run "openscad ${defArg} -o '${outFile}' '${inFile}'"`;
+    const cmd = `${openscadBin} ${defArg} -o '${outFile}' '${inFile}'`;
     execSync(cmd, { stdio: 'inherit' });
     const stat = fs.statSync(outFile);
     console.log(`  -> Size: ${(stat.size / 1024).toFixed(1)} KB`);

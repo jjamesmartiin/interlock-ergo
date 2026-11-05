@@ -55,7 +55,9 @@ Result, from a clean `pcb/dist`:
 DRC-clean is a *consequence* of the router, not a suppressed check: the gate still
 fails on violations or unconnected pads, and it now withdraws the previous fab
 artifacts **before** verifying, so a crash or a thrown assertion can never leave
-orderable files behind.
+orderable files behind. KiCad's creation timestamps are pinned on the way out, so
+the gerber set is reproducible and a diff in `pcb/dist/` always means a real
+change.
 
 Two mechanisms were added, both of which the first audit asked for:
 

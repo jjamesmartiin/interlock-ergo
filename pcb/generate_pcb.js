@@ -35,6 +35,23 @@ function crc32(buf) {
     for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
     return (c ^ -1) >>> 0;
 }
+/* KiCad stamps a creation date into every gerber, the .gbrjob and the DRC report,
+ * so two runs from identical sources produce byte-different artifacts and the
+ * working tree is dirty after every build. Pin the timestamps: the fab files are
+ * then reproducible, which means a committed gerber set can be diffed and a
+ * "the gerbers changed" commit actually means the copper changed. */
+function pinTimestamps(dir) {
+    const ISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:[+-]\d{2}:\d{2})?/g;
+    const LOCAL = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/g;
+    const pin = (text) => text.replace(ISO, "1970-01-01T00:00:00+00:00").replace(LOCAL, "1970-01-01 00:00:00");
+    for (const f of fs.readdirSync(dir)) {
+        const p = path.join(dir, f);
+        let text;
+        try { text = fs.readFileSync(p, "utf8"); } catch { continue; }
+        if (!text.includes("\u0000")) fs.writeFileSync(p, pin(text));
+    }
+}
+
 function writeZip(zipPath, dir) {
     const zlib = require('zlib');
     const names = fs.readdirSync(dir).filter((f) => fs.statSync(path.join(dir, f)).isFile()).sort();
@@ -1083,6 +1100,7 @@ function generateKiCadPCB(opts) {
         const mu = rpt.match(/\*\* Found (\d+) unconnected pads \*\*/);
         drcViolations = mv ? parseInt(mv[1], 10) : -1;
         drcUnconnected = mu ? parseInt(mu[1], 10) : 0;
+        if (rpt) fs.writeFileSync(drcReport, rpt.replace(/\*\* Created on [^*]+\*\*/, "** Created on 1970-01-01T00:00:00 **"));
     }
 
     if (drcViolations !== 0 || drcUnconnected !== 0) {
@@ -1105,6 +1123,8 @@ function generateKiCadPCB(opts) {
 
     execSync(`kicad-cli pcb export gerbers -o "${gerberSubdir}/" "${outPcbFile}"`);
     execSync(`kicad-cli pcb export drill -o "${gerberSubdir}/" "${outPcbFile}"`);
+
+    pinTimestamps(gerberSubdir);
 
     if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
     writeZip(zipPath, gerberSubdir);

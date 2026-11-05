@@ -146,9 +146,13 @@ node pcb/generate_pcb.js      # regenerate boards; DRC-clean boards emit fab fil
 ```
 
 `pcb/generate_pcb.js` refuses to emit gerbers, BOM or CPL for any board that has
-DRC violations, and withdraws previously published ones. **If a gerber zip is
-missing from `pcb/dist/`, that board is not orderable** - fix the routing, do not
-hand-build a zip from `pcb/*.kicad_pcb`.
+DRC violations or unconnected pads, and withdraws previously published ones.
+**If a gerber zip is missing from `pcb/dist/`, that board is not orderable** - fix
+the routing, do not hand-build a zip from `pcb/*.kicad_pcb`.
+
+Fabrication output is reproducible: KiCad's creation timestamps are pinned, so two
+runs from the same sources produce byte-identical gerbers and a "gerbers changed"
+diff always means the copper changed.
 
 All of the above run in CI, including the DRC gate.
 

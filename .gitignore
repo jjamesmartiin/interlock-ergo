@@ -1,0 +1,22 @@
+# Build outputs
+build/
+.west/
+zephyr/
+modules/
+*.uf2
+*.hex
+*.bin
+
+# 3D Slicing & CAD
+*.stl
+*.3mf
+*.gcode
+
+# OS and Editors
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+node_modules/

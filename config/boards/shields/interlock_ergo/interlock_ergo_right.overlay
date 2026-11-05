@@ -1,0 +1,27 @@
+#include "interlock_ergo.dtsi"
+
+/ {
+    kscan0: kscan {
+        compatible = "zmk,kscan-gpio-matrix";
+        diode-direction = "col2row";
+        col-offset = <7>;
+        row-gpios
+            = <&pro_micro 4 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&pro_micro 5 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&pro_micro 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&pro_micro 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&pro_micro 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            ;
+        col-gpios
+            = <&pro_micro 18 GPIO_ACTIVE_HIGH>  /* Col 7: 6, Y, H, N, Space_R (6YHN RIGHT SIDE) */
+            , <&pro_micro 15 GPIO_ACTIVE_HIGH>  /* Col 8: 7, U, J, M, Alt */
+            , <&pro_micro 14 GPIO_ACTIVE_HIGH>  /* Col 9: 8, I, K, comma, Layer */
+            , <&pro_micro 16 GPIO_ACTIVE_HIGH>  /* Col 10: 9, O, L, dot, Ctrl */
+            , <&pro_micro 10 GPIO_ACTIVE_HIGH>  /* Col 11: 0, P, semi, slash, Left */
+            , <&pro_micro 1 GPIO_ACTIVE_HIGH>   /* Col 12: minus, lbkt, quote, RShift, Down */
+            , <&pro_micro 0 GPIO_ACTIVE_HIGH>   /* Col 13: equal, rbkt, Enter, Up, Right */
+            , <&pro_micro 2 GPIO_ACTIVE_HIGH>   /* Col 14: bspc, bslh, Del */
+            , <&pro_micro 3 GPIO_ACTIVE_HIGH>   /* Col 15: PgUp, PgDn */
+            ;
+    };
+};

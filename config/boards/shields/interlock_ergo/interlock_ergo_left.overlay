@@ -1,0 +1,38 @@
+#include "interlock_ergo.dtsi"
+
+/ {
+    kscan0: kscan {
+        compatible = "zmk,kscan-gpio-matrix";
+        diode-direction = "col2row";
+        row-gpios
+            = <&pro_micro 4 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&pro_micro 5 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&pro_micro 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&pro_micro 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            , <&pro_micro 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            ;
+        col-gpios
+            = <&pro_micro 18 GPIO_ACTIVE_HIGH>  /* Col 0: Macro / Encoder Click */
+            , <&pro_micro 15 GPIO_ACTIVE_HIGH>  /* Col 1: Esc, Tab, Caps, Shift, Ctrl */
+            , <&pro_micro 14 GPIO_ACTIVE_HIGH>  /* Col 2: 1, Q, A, Z, Gui */
+            , <&pro_micro 16 GPIO_ACTIVE_HIGH>  /* Col 3: 2, W, S, X, Alt */
+            , <&pro_micro 10 GPIO_ACTIVE_HIGH>  /* Col 4: 3, E, D, C, Space_L */
+            , <&pro_micro 1 GPIO_ACTIVE_HIGH>   /* Col 5: 4, R, F, V */
+            , <&pro_micro 0 GPIO_ACTIVE_HIGH>   /* Col 6: 5, T, G, B, Fn */
+            ;
+    };
+
+    left_encoder: encoder_left {
+        compatible = "alps,ec11";
+        a-gpios = <&pro_micro 21 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        b-gpios = <&pro_micro 20 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        steps = <80>;
+        status = "okay";
+    };
+
+    sensors: sensors {
+        compatible = "zmk,keymap-sensors";
+        sensors = <&left_encoder>;
+        triggers-per-rotation = <20>;
+    };
+};

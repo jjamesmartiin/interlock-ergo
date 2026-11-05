@@ -1,0 +1,13 @@
+---
+include:
+  - board: nice_nano_v2
+    shield: interlock_ergo_left
+    snippet: studio-rpc-usb-uart
+  - board: nice_nano_v2
+    shield: interlock_ergo_right
+  - board: seeeduino_xiao_ble
+    shield: interlock_ergo_dongle
+  - board: nice_nano_v2
+    shield: interlock_ergo_dongle
+  - board: nrf52840dongle_nrf52840
+    shield: interlock_ergo_dongle

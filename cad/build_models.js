@@ -1,4 +1,5 @@
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execSync } = require('child_process');
 
@@ -55,35 +56,66 @@ const targets = [
     {
         name: 'dongle_case.stl',
         file: 'dongle_case.scad',
-        mode: null
+        mode: 'assembly'
+    },
+    {
+        name: 'dongle_case_base.stl',
+        file: 'dongle_case.scad',
+        mode: 'base'
+    },
+    {
+        name: 'dongle_case_lid.stl',
+        file: 'dongle_case.scad',
+        mode: 'lid'
     }
 ];
 
-function getCmd(bin) {
+function hasCmd(bin) {
     try {
-        execSync(`command -v ${bin} >/dev/null 2>&1`);
-        return bin;
+        execSync(`command -v ${bin} >/dev/null 2>&1`, { stdio: 'ignore' });
+        return true;
     } catch {
-        try {
-            execSync('command -v nix-shell >/dev/null 2>&1');
-            return `nix-shell -p ${bin} --run ${bin}`;
-        } catch {
-            return bin;
-        }
+        return false;
     }
 }
 
-const openscadBin = getCmd('openscad');
+// OpenSCAD is normally on PATH (devShell, nix build, CI). On a bare NixOS shell it
+// is not, so fall back to `nix-shell -p openscad`. Going through nix-shell means the
+// command line has to survive two levels of shell, which mangles -D quoting: write
+// the command into a temp script instead and let nix-shell just run the script.
+// (Losing the quotes makes OpenSCAD read `mode="left"` as the variable `left`, fall
+// through to the assembly branch, and export both halves into one file.)
+const localOpenscad = hasCmd("openscad");
+const hasNixShell = hasCmd("nix-shell");
+
+if (!localOpenscad && !hasNixShell) {
+    console.error("openscad not found on PATH and nix-shell is unavailable.\n" +
+        "Install OpenSCAD, or run this from `nix develop`.");
+    process.exit(1);
+}
+
+function renderOne(inFile, outFile, mode) {
+    const inner = `openscad ${mode ? `-D 'mode="${mode}"'` : ""} -o '${outFile}' '${inFile}'`;
+    if (localOpenscad) {
+        execSync(inner, { stdio: "inherit" });
+        return;
+    }
+    const script = path.join(os.tmpdir(), `interlock-ergo-openscad-${process.pid}.sh`);
+    fs.writeFileSync(script, `#!/bin/sh\nset -e\nexec ${inner}\n`, { mode: 0o755 });
+    try {
+        execSync(`nix-shell -p openscad --run '${script}'`, { stdio: "inherit" });
+    } finally {
+        fs.unlinkSync(script);
+    }
+}
 
 for (const t of targets) {
     const outFile = path.join(distDir, t.name);
     const inFile = path.join(cadDir, t.file);
-    const defArg = t.mode ? `-D mode="${t.mode}"` : '';
     console.log(`Generating ${t.name}...`);
-    const cmd = `${openscadBin} ${defArg} -o '${outFile}' '${inFile}'`;
-    execSync(cmd, { stdio: 'inherit' });
+    renderOne(inFile, outFile, t.mode);
     const stat = fs.statSync(outFile);
     console.log(`  -> Size: ${(stat.size / 1024).toFixed(1)} KB`);
 }
 
-console.log('✓ All 3D STL models successfully generated!');
+console.log(`✓ All ${targets.length} STL models generated in cad/dist/.`);

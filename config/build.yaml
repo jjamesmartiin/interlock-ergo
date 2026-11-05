@@ -10,3 +10,8 @@ include:
     shield: interlock_ergo_dongle
   - board: nrf52840dongle_nrf52840
     shield: interlock_ergo_dongle
+  # Recovery images: a stale BLE split bond otherwise leaves the board unusable
+  - board: nice_nano_v2
+    shield: settings_reset
+  - board: seeeduino_xiao_ble
+    shield: settings_reset

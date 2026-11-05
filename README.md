@@ -1,155 +1,256 @@
-# Interlock Ergo Keyboard
+# Interlock Ergo
 
 [![Build ZMK Firmware](https://github.com/jamesm/interlock-ergo/actions/workflows/build-zmk.yml/badge.svg)](https://github.com/jamesm/interlock-ergo/actions/workflows/build-zmk.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![ZMK Firmware](https://img.shields.io/badge/Firmware-ZMK-purple.svg)](https://zmk.dev/)
-[![Hardware](https://img.shields.io/badge/Hardware-KiCad%20%7C%20OpenSCAD-green.svg)](pcb/)
+[![Firmware: ZMK](https://img.shields.io/badge/firmware-ZMK-purple.svg)](https://zmk.dev/)
+[![Hardware: KiCad + OpenSCAD](https://img.shields.io/badge/hardware-KiCad%20%7C%20OpenSCAD-green.svg)](pcb/)
 
-An open-source, wireless split ergonomic keyboard designed to solve the classic split keyboard touch-typing dilemma described in [this Reddit r/keyboards post](https://www.reddit.com/r/keyboards/comments/37ez40/help_im_looking_for_a_split_ergonomic_keyboard/):
+A wireless 76-key split ergonomic keyboard that **docks into one rigid keyboard**.
+The two halves carry matching dovetail tabs and flush N52 magnets: lower one onto
+the other and the joint closes, lift one and they separate. Both halves talk to a
+USB dongle over low-power Bluetooth LE, so the host sees one ordinary USB HID
+keyboard with no pairing and no drivers.
 
-1. **`6-Y-H-N` Strictly on the Right Half:** Traditional split boards awkwardly bundle the `6` key onto the left hand (`1-2-3-4-5-6`), causing constant mis-strikes for right-hand index finger touch typists. Interlock Ergo routes `6`, `Y`, `H`, and `N` cleanly on the right half.
-2. **2-in-1 Interlocking Case:** Sliding dovetail joints with embedded N52 neodymium disc magnets allow both halves to lock into a single, rigid 65%+ unibody keyboard for lap typing, train/plane travel, or couch use—then pull apart for shoulder-width ergonomic desk typing.
-3. **Plug-and-Play 2.4GHz USB Dongle:** Powered by native ZMK split central architecture. Both halves connect wire-free over low-latency 2.4GHz RF to a miniature USB dongle. The dongle acts as a genuine USB HID keyboard: zero Bluetooth pairing friction, works in BIOS/UEFI, and bypasses corporate IT Bluetooth restrictions. Instant Bluetooth profile switching (`&out OUT_BLE`) remains available for phones and tablets.
-4. **Rotary Encoder & Macro Column:** Left half features an EC11 rotary encoder (volume / scroll scrub / mute click) and a dedicated vertical macro column (M1–M4).
-5. **Dual Switch Standards Supported:**
-   - **Variant A (Kailh Choc v1):** 18×17mm compact ergo spacing, 1.2mm plate, 2-prong crkbd/Corne hotswap sockets.
-   - **Variant B (Cherry MX):** 19.05×19.05mm standard spacing, 1.5mm plate, MX hotswap sockets.
+Two complete hardware variants are published, each with its own PCB and plate:
+
+| | **Choc v1** | **Cherry MX** |
+|---|---|---|
+| Pitch | 18.0 × 17.0 mm | 19.05 × 19.05 mm |
+| Plate | 1.2 mm | 1.5 mm |
+| Case height | 14.2 mm | 16.0 mm |
+| Case, docked | 350.2 × 137.6 mm | 367.5 × 147.8 mm |
+
+![Interlock Ergo, both halves docked](docs/images/hero.png)
+
+---
+
+## What makes it different
+
+1. **It becomes one keyboard.** The left half carries two dovetail tabs on its
+   seam face; the right half has the matching blind sockets. Four 6×3 mm N52
+   magnets, flush with the seam faces, hold the joint closed. The undercut profile
+   carries the load in tension and shear, so the seam behaves as one panel rather
+   than two cases pushed together.
+2. **A real USB keyboard, wirelessly.** A XIAO nRF52840 dongle is the ZMK split
+   central and enumerates as a plain USB HID device. The halves reach it over
+   Bluetooth LE at 2.4 GHz and bond with it once; the *host* never sees a
+   Bluetooth device, so there is no pairing, no driver, and nothing to re-pair
+   when you move between machines. It works in BIOS/UEFI and on laptops where
+   Bluetooth is locked down by policy. Bluetooth profiles remain available
+   (`&out OUT_BLE`) for phones and tablets.
+3. **76 keys, all 1u.** No stabilisers, no wide keys, no non-standard keycap sizes
+   to hunt for. ANSI row stagger (0 / 0.5 / 0.75 / 1.25 / 0.25 u) puts every letter
+   column exactly where it sits on a GH60, so touch-typing transfers unchanged.
+4. **Rotary encoder + function column** on the left half.
+
+![Layout](docs/images/layout.svg)
+
+The diagram above is generated from the same constants the CAD and the PCB use
+(`node docs/generate_layout.js`), so it cannot drift away from the hardware. Two
+consequences of the straight seam that are worth knowing before you build:
+
+- The row stagger needs 22.5 mm of horizontal shear. With a straight seam that
+  shear ends up as dead case width on each half's seam edge, so the **centre gap
+  between `5` and `6` is 67.1 mm (3.7 u)**, not the ~1.5 u of a normal staggered
+  board. It is the same on every row. That is the price of a straight seam plane;
+  a stepped seam would close it and is on the roadmap.
+- `6`, `Y`, `H` and `N` all land on the right half (red column in the diagram),
+  which is the usual convention for 6-column splits and matches ANSI.
+
+---
+
+## The parts
+
+| | |
+|---|---|
+| ![Left case](docs/images/case-left.png) | ![Right case](docs/images/case-right.png) |
+| Left half: seam face with the two dovetail tabs, USB-C window and the recessed power switch slot in the outer wall | Right half: blind dovetail sockets and flush magnet pockets in the seam wall |
+| ![Underside](docs/images/case-underside.png) | ![Plates](docs/images/plates.png) |
+| Underside: four M2 bosses with the PCB mounts, cell recess in the controller bay | Plates: 14.0 mm switch apertures, encoder through-hole on the left |
+| ![Dongle](docs/images/dongle.png) | |
+
+Every STL in `cad/dist/` is gated by `tests/test_models.js`, which fails the
+build if a part is more than one shell, is not watertight, or its dimensions
+disagree with the stackup in `cad/interlock_params.scad`.
 
 ---
 
 ## Layout
 
 ```
-[Enc/Mute] [Esc] [ 1 ] [ 2 ] [ 3 ] [ 4 ] [ 5 ]  ||  [ 6 ] [ 7 ] [ 8 ] [ 9 ] [ 0 ] [ - ] [ = ] [Bksp] [Home]
-[  M1   ] [Tab  ] [ Q ] [ W ] [ E ] [ R ] [ T ]  ||  [ Y ] [ U ] [ I ] [ O ] [ P ] [ [ ] [ ] ] [  \  ] [End ]
-[  M2   ] [Caps  ] [ A ] [ S ] [ D ] [ F ] [ G ]  ||  [ H ] [ J ] [ K ] [ L ] [ ; ] [ ' ] [  Enter  ]
-[  M3   ] [Shift   ] [ Z ] [ X ] [ C ] [ V ] [ B ]||  [ N ] [ M ] [ , ] [ . ] [ / ] [Shift] [Up ] [Del] [PgUp]
-[  M4   ] [Ctrl][Win][Alt] [ Space (2.25u) ] [Fn1]||  [ Space (2.0u/2.75u) ] [Alt][Fn2][Ctrl][Left][Down][Right][PgDn]
+[Mute ] [Esc  ] [1    ] [2    ] [3    ] [4    ] [5    ]  ‖ [6    ] [7    ] [8    ] [9    ] [0    ] [-    ] [=    ] [Bksp ] [Home ]
+   [Play ] [Tab  ] [Q    ] [W    ] [E    ] [R    ] [T    ]  ‖ [Y    ] [U    ] [I    ] [O    ] [P    ] [[    ] []    ] [\    ] [End  ]
+     [PrtSc] [Caps ] [A    ] [S    ] [D    ] [F    ] [G    ]  ‖ [H    ] [J    ] [K    ] [L    ] [;    ] ['    ] [Enter]
+        [Calc ] [Shift] [Z    ] [X    ] [C    ] [V    ] [B    ]  ‖ [N    ] [M    ] [,    ] [.    ] [/    ] [Shift] [Up   ] [Del  ] [PgUp ]
+  [Fn2  ] [Ctrl ] [Win  ] [Alt  ] [Space] [Fn1  ]  ‖ [Space] [Alt  ] [Fn1  ] [Ctrl ] [Left ] [Down ] [Right] [PgDn ]
 ```
+
+Printed by `node docs/generate_layout.js` straight out of the keymap, with each
+row indented by its ANSI stagger. 76 keys: 34 left + 42 right, in a 5 × 16 matrix.
+`docs/kle_layout.json` is the same layout as a Keyboard-Layout-Editor file, and
+`docs/matrix_and_pinout.md` has the electrical side. `Mute` is the encoder's push
+switch, which shares matrix position `RC(0,0)` and needs its own series diode; the
+`Mute / Play / PrtSc / Calc / Fn2` column is a plain function column, not user
+macros - there is no macro engine in the default keymap.
 
 ---
 
-## Repository Directory
+## Repository
 
 ```
-├── .github/workflows/
-│   └── build-zmk.yml           # Automated cloud firmware compilation
+├── .github/workflows/build-zmk.yml   # firmware build + matrix tests + PCB DRC gate
 ├── cad/
-│   ├── interlock_params.scad   # Shared parametric joint & tolerance math
-│   ├── interlock_case_choc.scad# Kailh Choc v1 case (18x17mm pitch)
-│   ├── interlock_case_mx.scad  # Cherry MX case (19.05mm pitch)
-│   ├── interlock_plate_choc.scad # 1.2mm Choc switch plate
-│   ├── interlock_plate_mx.scad # 1.5mm MX switch plate
-│   ├── dongle_case.scad        # Snap-fit USB dongle case
-│   ├── build_models.js         # Headless OpenSCAD STL compiler
-│   └── dist/                   # Watertight, production-ready STL models
-├── config/
-│   ├── boards/shields/interlock_ergo/
-│   │   ├── Kconfig.shield      # Left, Right, and Dongle shield declarations
-│   │   ├── Kconfig.defconfig   # CONFIG_ZMK_SPLIT & central/peripheral roles
-│   │   ├── interlock_ergo.dtsi # 76-key matrix transform
-│   │   ├── interlock_ergo_left.overlay   # Left half GPIO matrix + EC11 encoder
-│   │   ├── interlock_ergo_right.overlay  # Right half GPIO matrix with col-offset = 7
-│   │   ├── interlock_ergo_dongle.overlay # Central USB receiver mock kscan
-│   │   ├── interlock_ergo_left.conf      # Sleep & +8dBm BLE power
-│   │   ├── interlock_ergo_right.conf     # Sleep & +8dBm BLE power
-│   │   ├── interlock_ergo_dongle.conf    # Dongle central role & max connections
-│   │   └── interlock_ergo.keymap         # QWERTY, Nav/Fn, and Media/BLE layers
-│   ├── build.yaml              # ZMK build matrix
-│   └── west.yml                # West manifest
+│   ├── interlock_params.scad         # stackup, tolerances, joint and magnet geometry
+│   ├── interlock_case.scad           # the case, shared by both switch standards
+│   ├── interlock_case_{choc,mx}.scad # variant wrappers
+│   ├── interlock_plate.scad          # switch plate, shared by both standards
+│   ├── interlock_plate_{choc,mx}.scad
+│   ├── dongle_case.scad              # XIAO BLE tray + friction-fit lid
+│   ├── build_models.js               # headless STL build -> cad/dist/
+│   ├── render_preview.js             # headless STL -> docs/images/*.png
+│   └── dist/                         # printable STLs (generated, not committed)
+├── config/boards/shields/interlock_ergo/
+│   ├── Kconfig.shield, Kconfig.defconfig
+│   ├── interlock_ergo.dtsi           # 76-key matrix transform
+│   ├── interlock_ergo_{left,right,dongle}.overlay
+│   ├── interlock_ergo_{left,right,dongle}.conf
+│   └── interlock_ergo.keymap         # QWERTY, Nav/Fn, Media/BLE layers
 ├── docs/
-│   ├── bom.md                  # Comprehensive parts list with verified links
-│   ├── architecture.md         # Rationale, dongle architecture, battery math
-│   ├── matrix_and_pinout.md    # Ground-truth GPIO pin mapping & wiring
-│   ├── kle_layout.json         # Keyboard Layout Editor format
-│   └── production-readiness-audit.md # Exhaustive adversarial audit report
-├── pcb/
-│   ├── generate_pcb.js         # KiCad board generator, Gerber & CPL exporter
-│   ├── interlock_ergo_left_choc.kicad_pcb
-│   ├── interlock_ergo_right_choc.kicad_pcb
-│   ├── interlock_ergo_left_mx.kicad_pcb
-│   ├── interlock_ergo_right_mx.kicad_pcb
-│   └── dist/                   # Upload-ready JLCPCB Gerbers, BOM, and CPL files
+│   ├── architecture.md               # design rationale and the dongle topology
+│   ├── assembly.md                   # build order, torque, magnet polarity, flash steps
+│   ├── bom.md                        # parts with vendor links
+│   ├── matrix_and_pinout.md          # GPIO map and power tree
+│   ├── generate_layout.js            # draws docs/images/layout.svg from the real numbers
+│   └── production-readiness-audit.md # adversarial review of the current tree
+├── pcb/generate_pcb.js               # KiCad board generator + router + DRC gate
+├── pcb/*.kicad_pcb                   # four boards: {left,right} x {choc,mx}
+├── pcb/dist/                         # gerbers/BOM/CPL, only for DRC-clean boards
 └── tests/
-    └── test_matrix.js          # Adversarial test verifying matrix, config, and 6YHN
+    ├── test_matrix.js                # firmware matrix, Kconfig, stagger agreement
+    ├── test_models.js                # mesh watertightness + dimension gate
+    └── test_alignment.js             # plate, case and PCB switch grids agree
 ```
 
 ---
 
-## Manufacturing & Ordering Guide
+## Build and verify
 
-### 1. Ordering PCBs from JLCPCB
-
-1. Navigate to [JLCPCB](https://jlcpcb.com/quote).
-2. Upload the Gerber zip package for your chosen variant from `pcb/dist/`:
-   - Choc v1: `interlock_ergo_left_choc_gerbers.zip` and `interlock_ergo_right_choc_gerbers.zip`
-   - MX: `interlock_ergo_left_mx_gerbers.zip` and `interlock_ergo_right_mx_gerbers.zip`
-3. **Settings:**
-   - **Dimensions:** Detected automatically.
-   - **Layers:** 2 Layers.
-   - **PCB Thickness:** 1.6 mm.
-   - **Quantity:** **Select 3 pcs** (Selecting 5 pcs exceeds the 650 cm² total area limit and triggers a $57.46 surcharge. 3 pcs costs ~$18 total!).
-   - **Surface Finish:** LeadFree HASL or ENIG (recommended for hotswap durability).
-   - **Solder Mask:** Black (or your preferred color).
-4. **SMT Assembly (Optional):**
-   - Upload `bom_*.csv` and `cpl_*.csv` from `pcb/dist/` to have diodes pre-soldered.
-
-### 2. 3D Printing the Case & Plates
-
-- **Printer:** CoreXY FDM (Elegoo Centauri Carbon, Bambu Lab A1/X1/P1, Voron) with ≥ 180×180mm bed.
-- **Material:** PETG recommended for mechanical joint flexibility and durability.
-- **Settings:** 0.16mm layer height, 4 perimeters/walls, 20% Gyroid infill.
-- **Plate Thickness:** 1.2mm for Choc v1, 1.5mm for MX.
-- **Magnets:** Press-fit four 6×3mm N52 neodymium disc magnets into the side pockets with a drop of cyanoacrylate (CA glue). **Verify opposite polarities (N facing S) before gluing.**
-
----
-
-## Sourcing & Bill of Materials
-
-See [docs/bom.md](docs/bom.md) for full sourcing links and vendor alternatives.
-
-- **Controllers:** 2× nice!nano v2 (keyboard halves) + 1× Seeed Studio XIAO BLE nRF52840 (USB dongle).
-- **Batteries:** 2× 3.7V 500mAh LiPo pouches with integrated PCM protection circuit.
-- **Switches:** 76× Kailh Choc v1 (PG1350) or Cherry MX-compatible switches.
-- **Sockets:** 76× Kailh Hotswap sockets (Choc #C5333465 or MX #C2800547).
-- **Diodes:** 76× 1N4148W SOD-123 diodes (LCSC #C81598).
-- **Hardware:** 8× 6×3mm N52 neodymium disc magnets, 2× MSK-12D19 mini slide switches, 1× Alps Alpine EC11 encoder.
-
----
-
-## Firmware Flashing & Pairing
-
-### Automatic Cloud Build
-1. Fork or push to your GitHub repo.
-2. Under **Actions**, download the firmware zip containing `.uf2` files.
-3. Put the left controller in bootloader mode (double-tap reset) and copy `interlock_ergo_left-nice_nano_v2-zmk.uf2`.
-4. Put the right controller in bootloader mode and copy `interlock_ergo_right-nice_nano_v2-zmk.uf2`.
-5. Put the dongle in bootloader mode and copy `interlock_ergo_dongle-seeeduino_xiao_ble-zmk.uf2`.
-
-### Dongle RF Link
-The central dongle automatically scans and bonds with both peripherals on first boot. Plug the dongle into any computer, console, or USB port for instant, driverless HID typing.
-
----
-
-## Verification Tests
-
-Run the built-in matrix and configuration test suite:
 ```bash
-node tests/test_matrix.js
+node tests/test_matrix.js     # firmware matrix, shield config, CAD/PCB stagger agreement
+node tests/test_models.js     # every STL is one watertight shell of the right size
+node tests/test_alignment.js  # PCB switch footprints sit on the plate's aperture grid
+node cad/build_models.js      # rebuild all STLs
+node cad/render_preview.js    # rebuild the README renders
+node docs/generate_layout.js  # rebuild the layout diagram
+node pcb/generate_pcb.js      # regenerate boards; DRC-clean boards emit fab files
 ```
 
-Rebuild all 3D STL models:
-```bash
-node cad/build_models.js
-```
+`pcb/generate_pcb.js` refuses to emit gerbers, BOM or CPL for any board that has
+DRC violations, and withdraws previously published ones. **If a gerber zip is
+missing from `pcb/dist/`, that board is not orderable** - fix the routing, do not
+hand-build a zip from `pcb/*.kicad_pcb`.
 
-Regenerate all KiCad PCBs, Gerbers, and pick-and-place files:
-```bash
-node pcb/generate_pcb.js
-```
+All of the above run in CI, including the DRC gate.
 
 ---
+
+## Bill of materials
+
+Full sourcing with vendor links: [docs/bom.md](docs/bom.md).
+
+| Item | Qty | Notes |
+|---|---|---|
+| nice!nano v2 | 2 | one per half, castellated or socketed |
+| Seeed XIAO nRF52840 (BLE) | 1 | USB dongle (central) |
+| Kailh Choc v1 PG1350 **or** Cherry MX switches | 76 | pick one variant, not both |
+| Kailh hotswap sockets | 76 | Choc `CPG135001S30` / MX `CPG151101S11` |
+| 1N4148W SOD-123 | 76 | one per key, plus one for the encoder |
+| EC11 rotary encoder | 1 | left half only |
+| MSK-12D19 slide switch | 2 | power, one per half |
+| JST-PH 2.0 | 2 | cell connector |
+| Protected LiPo pouch, 402030 (4 × 20 × 30 mm) | 2 | ~250 mAh, **must** have a PCM |
+| 6 × 3 mm N52 disc magnets | 4 | two per seam |
+| M2 × 5 self-tapping screws | 8 | four per half |
+| Plates | 1 pair | 3D printed, or 1.2 mm FR4 for Choc |
+
+Battery reality check: the controller bay takes a 4 mm cell, so a 402030 is what
+fits. That is roughly 250 mAh, which with `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=900000`
+is around **2-3 weeks between charges**, not months. A bigger cell needs a taller
+`standoff_h` in `cad/interlock_params.scad` and a re-print.
+
+---
+
+## Manufacturing
+
+### PCBs
+
+1. `node pcb/generate_pcb.js`. Only DRC-clean boards are written to `pcb/dist/`.
+2. Order from JLCPCB: 2 layers, 1.6 mm, 1 oz copper, ENIG recommended for the
+   hotswap pads, **3 pcs per design** (5 pcs crosses the 650 cm² order-area
+   threshold and adds a large-order surcharge).
+3. `bom_*.csv` / `cpl_*.csv` are only emitted for diodes; hand-solder the
+   sockets, headers, JST and slide switch. That is cheaper than JLCPCB's
+   per-order PCBA fees at this volume.
+4. Order both design variants only if you intend to build both; each half is a
+   separate board because the halves are 34 and 42 keys and cannot be reversible.
+
+### Printing
+
+- PETG, 0.16 mm layers, 4 perimeters, 20% gyroid.
+- Cases: print with the floor down. The seam tabs and the bay are vertical walls,
+  so nothing needs support; only the two magnet pockets bridge, over 3.2 mm.
+- Plates: 1.2 mm (Choc) / 1.5 mm (MX) exactly. Do not scale.
+- Dongle: `dongle_case_base.stl` + `dongle_case_lid.stl`.
+- Bed size: the left case is 178 × 138 mm, the right 211 × 138 mm, so a 220 × 220
+  bed fits the left half and a 256 × 256 bed fits both.
+
+### Assembly
+
+See [docs/assembly.md](docs/assembly.md). The order matters: solder the sockets
+and diodes on the **bottom** of the PCB, screw the PCB to the four bosses, then
+drop the plate in **last** - the switches hold the plate down.
+
+---
+
+## Firmware
+
+CI builds all three shields. Download the artifact zip, then flash:
+
+| Board | File |
+|---|---|
+| left half (nice!nano v2) | `interlock_ergo_left-nice_nano_v2-zmk.uf2` |
+| right half (nice!nano v2) | `interlock_ergo_right-nice_nano_v2-zmk.uf2` |
+| dongle (XIAO BLE) | `interlock_ergo_dongle-seeeduino_xiao_ble-zmk.uf2` |
+
+CI also builds the dongle shield for `nice_nano_v2` and `nrf52840dongle_nrf52840`.
+Those are firmware-only targets: the printed dongle case fits the XIAO, and the
+Nordic USB-A dongle is a stick with no enclosure.
+
+Double-tap reset to enter the UF2 bootloader and copy the file across. The dongle
+bonds with both halves on first boot.
+
+If the halves stop connecting after a reflash or a controller swap, flash
+`settings_reset` on both halves and re-pair - it is built by the same workflow.
+
+Local builds with Nix are available from `flake.nix`
+(`nix build .#firmware-left`, `.#cad`, `.#pcb`).
+
+---
+
+## Status
+
+Every gate in this repository passes: the firmware matrix, the 3D-printed parts,
+the plate/PCB alignment, and the PCB DRC gate. All four boards route clean and
+their JLCPCB gerber/BOM/CPL packages are in `pcb/dist/`.
+
+What has *not* happened is a physical build. Nothing here has been printed,
+soldered or typed on. Before ordering PCBs, print one half and dry-fit it - see
+step 1 of [docs/assembly.md](docs/assembly.md).
+
+Known limitations, in full: [docs/production-readiness-audit.md](docs/production-readiness-audit.md)
+(67 mm docked centre gap, 250 mAh cell ceiling, assumed switch-body fit, no
+schematic).
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE).

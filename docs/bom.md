@@ -10,8 +10,9 @@ This directory provides verified sourcing links, Manufacturer Part Numbers (MPN)
 | :--- | :--- | :---: | :--- | :--- | :--- | :---: |
 | **Keyboard Controllers** | nice!nano v2 (nRF52840, BLE, LiPo charger) | 2 | nice!nano v2 | [Typeractive](https://typeractive.xyz/products/nice-nano) | [Boardsource](https://boardsource.xyz/store/5f4aae93b2a59a72785187ff) / [AliExpress SuperMini](https://www.aliexpress.com/item/1005005889754885.html) | $15.00 – $25.00 |
 | **USB Dongle MCU** | Seeed Studio XIAO BLE (nRF52840, USB-C) | 1 | 102010448 | [Seeed Studio](https://www.seeedstudio.com/Seeed-XIAO-BLE-nRF52840-p-5201.html) | [Mouser](https://www.mouser.com/ProductDetail/Seeed-Studio/102010448?qs=GBLSl2AkirvS17WpU00wKw%3D%3D) / [DigiKey](https://www.digikey.com/en/products/detail/seeed-technology-co-ltd/102010448/16652880) | $9.90 |
-| **Alternative Dongle** | Nordic nRF52840 USB-A Dongle | 1 | nRF52840-Dongle (PCA10059) | [Mouser](https://www.mouser.com/ProductDetail/Nordic-Semiconductor/nRF52840-Dongle?qs=gZXFycFWdANX6k4nLp0c1Q%3D%3D) | [DigiKey](https://www.digikey.com/en/products/detail/nordic-semiconductor-asa/NRF52840-DONGLE/9491124) | $12.50 |
-| **LiPo Batteries** | 3.7V 500mAh–750mAh LiPo w/ PCM protection | 2 | 503040 / 603040 | [Adafruit #1578](https://www.adafruit.com/product/1578) | [Amazon (PKCELL 503040 2-Pack)](https://www.amazon.com/dp/B07BTTR6V3) | $6.00 – $8.00 |
+| **Alternative Dongle** | Nordic nRF52840 USB-A Dongle — firmware target only, the printed enclosure fits the XIAO | 1 | nRF52840-Dongle (PCA10059) | [Mouser](https://www.mouser.com/ProductDetail/Nordic-Semiconductor/nRF52840-Dongle?qs=gZXFycFWdANX6k4nLp0c1Q%3D%3D) | [DigiKey](https://www.digikey.com/en/products/detail/nordic-semiconductor-asa/NRF52840-DONGLE/9491124) | $12.50 |
+| **LiPo Batteries** | 3.7V protected pouch **402030 (4 x 20 x 30 mm)**, ~250mAh, with PCM | 2 | 402030 + PCM | [Adafruit protected LiPo](https://www.adafruit.com/category/574) | [PKCELL 402030](https://www.amazon.com/s?k=402030+lipo+protected) | $4.00 – $7.00 |
+| **Cell fit note** | The controller bay takes a 4 mm cell. A 5 mm 503040 does **not** fit this case - see docs/assembly.md | - | - | - | - | - |
 | **Battery Connectors** | JST-PH 2.0mm 2-pin Right-Angle Header | 2 | S2B-PH-K-S | [DigiKey](https://www.digikey.com/en/products/detail/jst-sales-america-inc/S2B-PH-K-S/926626) | [LCSC C145955](https://www.lcsc.com/product-detail/JST_S2B-PH-K-S_C145955.html) | $0.20 |
 | **Power Slide Switches** | SPDT Mini Slide Switch (MSK-12D19) | 2 | MSK-12D19 / SK-12D19 | [LCSC C432174](https://www.lcsc.com/product-detail/Slide-Switches_XKB-Enterprise-SK-12D19-G5-B_C432174.html) | [Typeractive](https://typeractive.xyz/products/spdt-switch) | $0.15 |
 | **Rotary Encoder** | Alps Alpine EC11 with Push Switch (15mm D-Shaft) | 1 | EC11E15244G1 | [Keebio](https://keeb.io/products/rotary-encoder-ec11) | [Mouser](https://www.mouser.com/ProductDetail/Alps-Alpine/EC11E15244G1?qs=6EGMNY9ZYDRmB7Qc4L%2FkXw%3D%3D) | $2.50 |
@@ -47,14 +48,23 @@ This directory provides verified sourcing links, Manufacturer Part Numbers (MPN)
 
 | Item | Description | Qty | Sourcing Link | Est. Total |
 | :--- | :--- | :---: | :--- | :---: |
-| **Interlock Magnets** | 6mm diameter × 3mm thick Neodymium N52 Discs | 8 | [Amazon 6x3mm N52 Discs](https://www.amazon.com/dp/B093L3XQ9N) / [K&J Magnetics D42](https://www.kjmagnetics.com/proddetail.asp?prod=D42) | $4.50 |
+| **Interlock Magnets** | 6mm diameter × 3mm thick Neodymium N52 Discs (two per seam) | 4 | [Amazon 6x3mm N52 Discs](https://www.amazon.com/dp/B093L3XQ9N) / [K&J Magnetics D42](https://www.kjmagnetics.com/proddetail.asp?prod=D42) | $4.50 |
 | **Rubber Bumper Feet** | 3M Bumpon Hemispherical Silicone Feet (Ø8mm × 2mm) | 8 | [Amazon 3M Clear Feet](https://www.amazon.com/dp/B06XCLYL53) | $3.00 |
 | **Adhesive** | Loctite Gel Control Cyanoacrylate (Super Glue) | 1 | Local Hardware / Amazon | $4.00 |
 | **Filament** | eSun / Bambu / Polymaker PETG (1kg spool) | 0.5 spool | [Amazon eSun PETG Black](https://www.amazon.com/dp/B07PGZ9B5N) | ~$12.00 |
 
 ---
 
-## 5. Cost Summary & Budget Optimization
+## 5. Fasteners
+
+| Item | Description | Qty | Sourcing Link | Est. Total |
+| :--- | :--- | :---: | :--- | :---: |
+| **PCB screws** | M2 x 5 self-tapping, pan head (four per half, into the printed bosses) | 8 | Amazon / local hardware | $1.50 |
+| **Cell insulation** | 0.5mm fishpaper or a printed shim between the cell and the PCB | 2 | Amazon | $2.00 |
+
+---
+
+## 6. Cost Summary & Budget Optimization
 
 - **Prototype DIY Build (Hand-Soldered SMT, 3D-Printed Case/Plates):**
   - Choc v1 Variant: **~$165.00**

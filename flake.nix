@@ -60,6 +60,7 @@
             buildPhase = ''
               export HOME=$TMPDIR
               node cad/build_models.js
+              node tests/test_models.js
             '';
             installPhase = ''
               mkdir -p $out
@@ -126,9 +127,9 @@
             shellHook = ''
               echo "🖮  Interlock Ergo Nix Development Shell"
               echo "----------------------------------------"
-              echo "• Run test suite:   node tests/test_matrix.js"
+              echo "• Run test suite:   node tests/test_matrix.js && node tests/test_models.js"
               echo "• Compile CAD STLs: nix build .#cad"
-              echo "• Generate PCBs:    nix build .#pcb"
+              echo "• Generate PCBs:    nix build .#pcb   (fails until every board is DRC-clean)"
               echo "• Build Release:    nix build"
               echo ""
             '';

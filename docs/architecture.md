@@ -1,55 +1,102 @@
-# System Architecture & Design Rationale
+# System Architecture
 
-## 1. The "6 Key on the Right" Problem
+## 1. Layout and why the columns are where they are
 
-In touch-typing methodology, the number row is allocated to fingers symmetrically:
-- **Left Index Finger:** `4`, `5` (and columns `R-T`, `F-G`, `V-B`)
-- **Right Index Finger:** `6`, `7` (and columns `Y-U`, `H-J`, `N-M`)
+76 keys, all 1u. No stabilisers, no wide keys: every keycap is a size any Choc or
+MX set already contains, which removes the single most annoying sourcing problem in
+small-batch keyboard building.
 
-However, on classic commercial split keyboards (e.g., Microsoft Natural 4000, Microsoft Sculpt, Ergodox, Alice clones), manufacturers frequently place the `6` key on the **left half** (`1-2-3-4-5-6`), leaving only `7-8-9-0` on the right. For touch typists trained to hit `6` with the right hand, this leads to relentless mis-types and wrist strain.
+The ANSI feel comes from the row stagger, not from wide modifiers. Each whole row is
+shifted by 0 / 0.5 / 0.75 / 1.25 / 0.25 u so that every letter column lands on its
+GH60 x position, so touch typists keep their muscle memory. The price is that the
+stagger needs 22.5 mm of horizontal shear, which a straight seam converts into dead
+case width at each half's seam edge — see the README's note on the 67 mm centre gap.
 
-As highlighted in the [Reddit r/keyboards inquiry](https://www.reddit.com/r/keyboards/comments/37ez40/help_im_looking_for_a_split_ergonomic_keyboard/), budget split keyboards almost uniformly place `6` on the left, while split keyboards offering `6` on the right have historically been boutique or exorbitantly expensive ($250+).
+`6`, `Y`, `H` and `N` are on the right half. That matches the convention of every
+6-column split (Lily58, Sofle, Iris, Kyria) and of ANSI, so it is a correctness
+property rather than a market gap. The differentiator of this board is the
+interlocking dock, not the 6 key.
 
-**Interlock Ergo** resolves this by placing `6`, `Y`, `H`, and `N` strictly on the right half.
+## 2. Firmware: ZMK, and why a dongle
 
----
+| | ZMK | QMK |
+|---|---|---|
+| Wireless | designed for BLE and low power on nRF52840 | wired-first, wireless is third-party |
+| Split over BLE | native, with a `central` role that can also be a USB device | needs a custom bridge |
+| Host compatibility | the central enumerates as an ordinary USB HID keyboard | n/a |
 
-## 2. Firmware Choice: ZMK vs. QMK for 2.4GHz Wireless
+The dongle is a ZMK split **central** with a mock key scanner, so it forwards both
+peripherals' key events over USB HID. Compared with pairing each half as a separate
+Bluetooth keyboard this gives:
 
-| Feature | ZMK (Zephyr RTOS) | QMK Firmware |
-| :--- | :--- | :--- |
-| **Native Wireless Architecture** | Built from inception for BLE & low-power nRF52840 | Primarily wired; wireless is experimental / third-party |
-| **2.4GHz USB Dongle Mode** | Native (`ZMK_SPLIT_BLE_ROLE_CENTRAL` + 2 peripherals) | Requires complex custom bridging |
-| **Battery Life (500mAh LiPo)** | 3 to 6 months per charge with deep sleep | Hours to a few days |
-| **Plug-and-Play HID (BIOS/UEFI)** | Dongle acts as genuine USB HID keyboard | Wired only |
-| **Multi-Host Switching** | Switch between 2.4GHz Dongle, BT 0, BT 1, BT 2 | Limited |
+- one keyboard identity on the host, with no pairing and no driver;
+- works in BIOS/UEFI and in OS installers;
+- works on machines where Bluetooth is disabled by policy.
 
-### Why the 2.4GHz USB Dongle is the Best Setup:
-1. **Universal Versatility:** Plugs into any USB-A or USB-C port (Linux, Windows, macOS, Android, Steam Deck, BIOS/UEFI setup screens).
-2. **Bypasses IT Bluetooth Restrictions:** Operates as a standard wired USB HID keyboard to the host OS—no Bluetooth pairing or driver installation required on locked-down company laptops.
-3. **Completely Wire-Free Typing:** Both halves are battery-powered and communicate wirelessly to the tiny USB dongle. No TRRS cable between halves to get tangled or short out.
-4. **Dual Output Mode:** When traveling without the dongle, toggle `&out OUT_BLE` to pair directly with phones, iPads, or laptops via Bluetooth LE.
+The halves are BLE **peripherals** and do not need to know the host exists.
+Bluetooth profiles remain available by switching the dongle's output
+(`&out OUT_BLE`), so the same board pairs with a phone or tablet.
 
----
+Battery cost of the topology: each peripheral holds one BLE link to the central.
+With `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=900000` (15 min) and a ~250 mAh 402030 cell,
+expect **2–3 weeks** between charges, not months. The case cannot take a thicker
+cell without raising `standoff_h` and re-printing both halves.
 
-## 3. Interlocking Mechanical System
+## 3. The interlock
 
-A major drawback of split keyboards is that they cannot be used on a lap, on a train, in bed, or on small airline tray tables without sliding around.
+**Docked.** The left half carries two dovetail tabs on its seam face; the right half
+has the matching blind sockets, 3.2 mm deep in a 6 mm seam wall. The profile is an
+undercut — a 6 mm throat opening to a 9 mm head — so once the halves are together
+they cannot be pulled apart along X, and the angled flanks also take out Z and roll.
+The joint is a **vertical drop-in**: lower one half onto the other. There is no
+sliding direction, which is what makes it printable with no support under the tab.
 
-**Interlock Ergo** solves this with a 2-in-1 hybrid design:
-- **Separated Mode (Desk):** The left and right halves sit apart at shoulder width and custom splay angles for optimal posture.
-- **Docked Mode (Lap / Travel):** The two halves slide together along the staggered seam (`5-T-G-B` on left, `6-Y-H-N` on right). Embedded N52 neodymium magnets and precision dovetail tabs lock them into a rigid unibody 65%+ keyboard that can be picked up with one hand.
-- **Angled Tray Mode (Optional):** Drop both halves into the 3D-printed dock to lock them at a fixed 12° ergonomic angle with integrated tenting.
+**Held shut.** Four 6 × 3 mm N52 discs, two per half, sit flush in the seam faces so
+each magnet faces its opposite pole across a 0.4 mm gap. They hold the joint closed
+along Y, the one axis the dovetail leaves free. Polarity dimples are modelled beside
+each pocket, because a reversed pair turns the joint into a repulsion problem.
 
----
+**Separated.** Lift one half; nothing latches and nothing slides. Each half is
+independently usable, and the case is a tray with no bottom cover — the switch plate
+is the lid, and the switches hold the plate.
 
-## 4. Hardware Bill of Materials (BOM)
+## 4. Switching and the plate
 
-- **Controllers (2x):** Nice!nano v2 (or SuperMini nRF52840) for keyboard halves.
-- **Dongle Controller (1x):** Seeed Studio XIAO BLE (nRF52840) or Nordic nRF52840 Dongle (PCA10059) or Nice!nano v2.
-- **Batteries (2x):** 3.7V 500mAh - 800mAh LiPo (dimensions ~30mm x 40mm x 5mm, e.g. 503040).
-- **Power Switches (2x):** MSK-12D19 mini slide switches (SPDT).
-- **Rotary Encoder (1x):** EC11 rotary encoder with integrated push button (7mm or 15mm D-shaft).
-- **Key Switches (67x - 76x):** Kailh Choc v1 low profile OR Cherry MX / Gateron style switches.
-- **Diodes (76x):** 1N4148 / 1N4148W switching diodes (SOD-123 or through-hole).
-- **Magnets (4x):** 6mm diameter × 3mm thick Neodymium N52 disc magnets.
+The plate is the only part that retains a switch, so its two dimensions matter:
+aperture and thickness. Both apertures are 14.0 mm square (Kailh's Choc drawing is
+13.8 ± 0.2, so the upper bound is the safe cutout, and MX uses the same number), and
+the thickness is 1.2 mm for Choc and 1.5 mm for MX. Choc retention barbs only latch
+in a 1.2 mm plate; 1.5 mm is an MX number and gives loose Choc switches.
+
+The plate drops into a rebate so its top is flush with the case rim, and rests on a
+ledge 3.5 mm (Choc) / 5.0 mm (MX) above the PCB — exactly the depth of the switch
+body below the plate. That gap is asserted in `cad/interlock_params.scad` and
+re-checked by `tests/test_models.js`.
+
+## 5. Power
+
+Cell → JST-PH on the PCB → slide switch → nice!nano `RAW` (its `B+`). Ground returns
+directly. The cell must be a protected pouch: the nice!nano's charger handles
+charging only and provides no over-discharge or over-current protection. Charge
+current is fixed at 100 mA, so a ~250 mAh cell sits at C/2.5 and the boost jumper
+must stay open.
+
+The nice!nano measures its own cell through VDDH (`zmk,battery-nrf-vddh`), so no
+divider and no ADC pin are involved. The dongle proxies each peripheral's level to
+the host.
+
+## 6. Mechanical stackup
+
+One chain of constants in `cad/interlock_params.scad` drives everything:
+
+```
+plate top    = case_depth                      (flush with the case rim)
+plate bottom = case_depth - plate_thickness    <- the ledge the plate sits on
+PCB top      = plate bottom - plate_gap        (switch body)
+PCB bottom   = PCB top - pcb_thickness         (on four M2 bosses)
+floor top    = PCB bottom - standoff_h         (cell + socket clearance)
+```
+
+Choc: 1.2 + 3.5 + 1.6 + 5.5 + 2.4 = **14.2 mm**. MX: 1.5 + 5.0 + 1.6 + 5.5 + 2.4 =
+**16.0 mm**. Changing any one of these re-derives the case, and
+`tests/test_models.js` fails if an exported part disagrees with the sum.

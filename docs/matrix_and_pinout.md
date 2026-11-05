@@ -16,7 +16,7 @@ The left half hosts a 5-row × 7-column matrix plus an EC11 rotary encoder.
 - **Row 4:** `&pro_micro 8` -> `P1.04`
 
 ### Column GPIOs (Active High Drive):
-- **Col 0:** `&pro_micro 18` -> `P1.15` — Macro column (Encoder Click / M1, M2, M3, M4, M5)
+- **Col 0:** `&pro_micro 18` -> `P1.15` — Encoder push (row 0, `RC(0,0)`), then Mute / Play / PrtSc / Calc / Fn2 down the column. The encoder push switch and the row-0 key share one matrix position, so the PCB emits a series diode for it and no switch socket.
 - **Col 1:** `&pro_micro 15` -> `P1.13` — Esc, Tab, Caps, LShift, LCtrl
 - **Col 2:** `&pro_micro 14` -> `P1.11` — 1, Q, A, Z, LGui
 - **Col 3:** `&pro_micro 16` -> `P0.10` — 2, W, S, X, LAlt
@@ -44,15 +44,15 @@ The right half hosts a 5-row × 9-column matrix.
 - **Row 4:** `&pro_micro 8` -> `P1.04`
 
 ### Column GPIOs (Col Offset 7 assigned via `&default_transform`):
-- **Col 7:**  `&pro_micro 18` -> `P1.15` — **6, Y, H, N, Space_R** (Strictly Right Half)
+- **Col 7:**  `&pro_micro 18` -> `P1.15` — **6, Y, N, Space_R** (no home-row key: the home row ends at Enter)
 - **Col 8:**  `&pro_micro 15` -> `P1.13` — 7, U, J, M, RAlt
 - **Col 9:**  `&pro_micro 14` -> `P1.11` — 8, I, K, Comma, Mo(2)
 - **Col 10:** `&pro_micro 16` -> `P0.10` — 9, O, L, Dot, RCtrl
 - **Col 11:** `&pro_micro 10` -> `P0.09` — 0, P, Semicolon, Slash, Left Arrow
 - **Col 12:** `&pro_micro 1`  -> `P0.06` — Minus, [, Quote, RShift, Down Arrow
 - **Col 13:** `&pro_micro 0`  -> `P0.08` — Equal, ], Enter, Up Arrow, Right Arrow
-- **Col 14:** `&pro_micro 2`  -> `P0.17` — Backspace, Backslash, Delete
-- **Col 15:** `&pro_micro 3`  -> `P0.20` — Page Up, Page Down
+- **Col 14:** `&pro_micro 2`  -> `P0.17` — Bksp, Backslash, Delete, PgDn (no home-row key)
+- **Col 15:** `&pro_micro 3`  -> `P0.20` — Home, End, PgUp (no home-row or bottom-row key)
 
 ---
 
@@ -61,4 +61,5 @@ The right half hosts a 5-row × 9-column matrix.
 - **Battery Input:** 3.7V LiPo with integrated PCM (Protection Circuit Module).
 - **Power Switch:** SPDT mini slide switch (MSK-12D19) connected in series between LiPo positive terminal and nice!nano `B+` pad.
 - **Battery Negative:** Direct to nice!nano `B-` / `GND`.
-- **Battery Fuel Gauge:** nice!nano v2 measures cell voltage directly via internal VDDH (`zmk,battery-nrf-vddh`).
+- **Battery Fuel Gauge:** nice!nano v2 measures cell voltage directly via internal VDDH (`zmk,battery-nrf-vddh`). No divider, no ADC pin.
+- **Cell:** protected 402030 pouch (~250 mAh). The controller bay is sized for a 4 mm cell; a 5 mm pouch does not fit.

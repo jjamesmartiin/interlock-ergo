@@ -5,12 +5,54 @@ on:
     paths:
       - ".github/workflows/**"
       - "config/**"
+      - "cad/**"
+      - "pcb/**"
+      - "tests/**"
   pull_request:
     paths:
       - ".github/workflows/**"
       - "config/**"
+      - "cad/**"
+      - "pcb/**"
+      - "tests/**"
   workflow_dispatch:
 
 jobs:
   build:
     uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Matrix, shields, stagger and fab-artifact gate
+        run: node tests/test_matrix.js
+      - name: Rebuild meshes and check them
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends openscad
+          node cad/build_models.js
+          node tests/test_models.js
+      - name: Layout diagram and KLE must be reproducible from source
+        run: |
+          node docs/generate_layout.js
+          git diff --exit-code docs/images/layout.svg docs/kle_layout.json
+
+  pcb-drc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install KiCad CLI
+        run: |
+          sudo add-apt-repository --yes ppa:kicad/kicad-9.0-releases
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends kicad
+      - name: Generate boards and enforce the DRC gate
+        # Exits non-zero while any board has DRC violations or unconnected pads, and
+        # emits no gerbers/BOM/CPL for a dirty board. This is the gate that stops an
+        # unmanufacturable PCB order.
+        run: node pcb/generate_pcb.js
+      - name: Plate, case and PCB must agree on every switch position
+        run: node tests/test_alignment.js

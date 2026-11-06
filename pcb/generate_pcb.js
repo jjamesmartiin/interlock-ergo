@@ -983,7 +983,11 @@ function generateKiCadPCB(opts) {
     }
     pcbContent += `  )\n`;
 
-    // Rotary Encoder on Left Half
+    // Rotary Encoder on Left Half - Alps EC11E with push switch.
+    // Pad geometry from marbastlib's ROT_Alps_EC11E-Switch: A/B/C at y=+7.5 on
+    // 2.5mm pitch, the push switch at y=-7, and two 2.8 x 1.5mm slotted mounting
+    // posts at x=+/-5.6. The mounting posts are structural - without them the
+    // encoder body stands on its own legs and never seats on the board.
     if (side === 'left') {
         const encX = offsetX.toFixed(2);
         const encY = offsetY.toFixed(2);
@@ -992,18 +996,23 @@ function generateKiCadPCB(opts) {
         pcbContent += `  (footprint "RotaryEncoder_Alps_EC11" (layer "F.Cu")
     (at ${encX} ${encY})
     (fp_text reference "ENC1" (at 0 -8) (layer "F.SilkS"))
-    (pad "A" thru_hole circle (at -2.5 7.0) (size 1.8 1.8) (drill 1.0) (layers *.Cu *.Mask) (net ${netEncA.id} "${netEncA.name}"))
-    (pad "C" thru_hole circle (at 0 7.0) (size 1.8 1.8) (drill 1.0) (layers *.Cu *.Mask) (net 1 "GND"))
-    (pad "B" thru_hole circle (at 2.5 7.0) (size 1.8 1.8) (drill 1.0) (layers *.Cu *.Mask) (net ${netEncB.id} "${netEncB.name}"))
-    (pad "S1" thru_hole circle (at -2.5 -7.0) (size 1.8 1.8) (drill 1.0) (layers *.Cu *.Mask) (net ${col0Net.id} "${col0Net.name}"))
-    (pad "S2" thru_hole circle (at 2.5 -7.0) (size 1.8 1.8) (drill 1.0) (layers *.Cu *.Mask) (net ${encKeyNet.id} "${encKeyNet.name}"))
+    (pad "A" thru_hole circle (at -2.5 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${netEncA.id} "${netEncA.name}"))
+    (pad "C" thru_hole circle (at 0 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net 1 "GND"))
+    (pad "B" thru_hole circle (at 2.5 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${netEncB.id} "${netEncB.name}"))
+    (pad "" np_thru_hole oval (at -5.6 0) (size 2.8 1.5) (drill oval 2.8 1.5) (layers *.Cu *.Mask))
+    (pad "" np_thru_hole oval (at 5.6 0) (size 2.8 1.5) (drill oval 2.8 1.5) (layers *.Cu *.Mask))
+    (pad "S1" thru_hole circle (at -2.5 -7.0) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${col0Net.id} "${col0Net.name}"))
+    (pad "S2" thru_hole circle (at 2.5 -7.0) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${encKeyNet.id} "${encKeyNet.name}"))
   )\n`;
         const efx = parseFloat(encX), efy = parseFloat(encY);
-        rec({ ref: 'ENC1', num: 'A', x: efx - 2.5, y: efy + 7.0, net: netEncA.id, kind: 'circle', hw: 0.9, hh: 0.9, layers: [0, 1] });
-        rec({ ref: 'ENC1', num: 'C', x: efx, y: efy + 7.0, net: 1, kind: 'circle', hw: 0.9, hh: 0.9, layers: [0, 1] });
-        rec({ ref: 'ENC1', num: 'B', x: efx + 2.5, y: efy + 7.0, net: netEncB.id, kind: 'circle', hw: 0.9, hh: 0.9, layers: [0, 1] });
-        rec({ ref: 'ENC1', num: 'S1', x: efx - 2.5, y: efy - 7.0, net: col0Net.id, kind: 'circle', hw: 0.9, hh: 0.9, layers: [0, 1] });
-        rec({ ref: 'ENC1', num: 'S2', x: efx + 2.5, y: efy - 7.0, net: encKeyNet.id, kind: 'circle', hw: 0.9, hh: 0.9, layers: [0, 1] });
+        rec({ ref: 'ENC1', num: 'A', x: efx - 2.5, y: efy + 7.5, net: netEncA.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
+        rec({ ref: 'ENC1', num: 'C', x: efx, y: efy + 7.5, net: 1, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
+        rec({ ref: 'ENC1', num: 'B', x: efx + 2.5, y: efy + 7.5, net: netEncB.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
+        rec({ ref: 'ENC1', num: 'S1', x: efx - 2.5, y: efy - 7.0, net: col0Net.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
+        rec({ ref: 'ENC1', num: 'S2', x: efx + 2.5, y: efy - 7.0, net: encKeyNet.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
+        // Mounting posts: blocked on both layers, radius taken from the slot's long axis.
+        hole(efx - 5.6, efy, 1.4);
+        hole(efx + 5.6, efy, 1.4);
     }
 
     // Power Switch (MSK-12D19) in the top bay, on the outer edge of the board

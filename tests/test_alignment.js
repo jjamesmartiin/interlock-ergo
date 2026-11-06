@@ -140,7 +140,20 @@ for (const b of boards) {
         const offsetX = MARGIN_X + v.pitchX * 0.5;
         const offsetY = TOP_BAY + MARGIN_Y + v.pitchY * 0.5;
         assert(Math.abs(enc[0].x - offsetX) < 0.02 && Math.abs(enc[0].y - offsetY) < 0.02,
-            `${path.basename(b.file)}: encoder at (${enc[0].x}, ${enc[0].y}) is not on the plate's RC(0,0) position (${offsetX}, ${offsetY})`);
+            `${path.basename(b.file)}: encoder at (${enc[0].x}, ${enc[0].y}) is not on the plate RC(0,0) position (${offsetX}, ${offsetY})`);
+        // The EC11 body stands on two 2.8 x 1.5mm mounting posts. Without holes for
+        // them the encoder never seats on the board - the same class of defect as a
+        // hotswap pad sitting on a switch pin, and equally invisible to DRC.
+        const encChunk = fs.readFileSync(b.file, 'utf8').split('(footprint "')
+            .find((c) => /^RotaryEncoder/.test(c));
+        const mp = (encChunk.match(/\(pad "" np_thru_hole oval \(at (-?[\d.]+) (-?[\d.]+)\)/g) || [])
+            .map((t) => t.match(/at (-?[\d.]+) (-?[\d.]+)/).slice(1).map(Number))
+            .sort((q, r) => q[0] - r[0]);
+        assert.strictEqual(mp.length, 2,
+            `${path.basename(b.file)}: encoder has ${mp.length} mounting-post slots, expected 2`);
+        assert(mp.length === 2 && Math.abs(mp[0][0] + 5.6) < 0.01 && Math.abs(mp[1][0] - 5.6) < 0.01 &&
+            mp.every((q) => Math.abs(q[1]) < 0.01),
+            `${path.basename(b.file)}: encoder mounting slots at ${JSON.stringify(mp)}, expected (-5.6,0) and (5.6,0)`);
     } else {
         assert.strictEqual(fps.filter((f) => /Encoder/i.test(f.name)).length, 0,
             `${path.basename(b.file)}: right half must not carry an encoder`);

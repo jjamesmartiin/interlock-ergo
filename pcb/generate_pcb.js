@@ -800,7 +800,10 @@ function generateKiCadPCB(opts) {
     // Dimensions for MCU, Power Switch, and Battery in Top Controller Bay
     const mcuX = (boardW * 0.5).toFixed(2);
     // Pads span +/-13.97mm around the origin; 16.0 leaves ~1.2mm of copper inside Edge.Cuts.
-    const mcuY = 16.0;
+    // 17.0, not 16.0: a nice!nano is 33.02mm long about its pad grid centre, so at
+    // 16 the module would overhang the board edge into the case wall. At 17 its front
+    // edge is 0.49mm inside the board and its far edge clears the controller bay.
+    const mcuY = 17.0;
     // Power switch lives in the controller bay on the OUTER edge of each board so
     // the case's through-slot can reach its actuator (0.3 mm clear of the cavity wall).
     const swX = (side === 'left' ? 2.05 : boardW - 2.05).toFixed(2);
@@ -877,9 +880,12 @@ function generateKiCadPCB(opts) {
             // not matter electrically, only that each pad is outboard of its pin.
             const pads = isChoc
                 ? {
+                    // marbastlib and keebio agree on 3.245mm / 2.65x2.6 (both trace
+                    // to Kailh's drawing); ergogen uses 3.275 / 2.6x2.6. Take the
+                    // two-library consensus.
                     pinA: { x: 0, y: -5.95 }, pinB: { x: 5, y: -3.75 },
-                    padA: { x: -3.275, y: -5.95, w: 2.6, h: 2.6 },
-                    padB: { x: 8.275, y: -3.75, w: 2.6, h: 2.6 },
+                    padA: { x: -3.245, y: -5.95, w: 2.65, h: 2.6 },
+                    padB: { x: 8.245, y: -3.75, w: 2.65, h: 2.6 },
                     centre: 3.429, peg: 1.7018, pegX: 5.5, pinHole: 3.0,
                     name: 'Kailh_Choc_V1_CPG135001S30', refY: 3.0
                 }

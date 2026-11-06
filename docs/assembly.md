@@ -135,19 +135,43 @@ switches and never needs screws.
    and power-cycle the dongle. That is the recovery path - there is nothing else
    to try, and no key combination to remember.
 
+## The one dimension to check before you trust the case
+
+The case depth is derived from the plate-underside-to-PCB gap: 3.5 mm for Choc,
+5.0 mm for MX. The MX number is well documented. The **Choc 3.5 mm is inferred**,
+not read off Kailh's drawing (see docs/part-dimensions.md) - the drawing is
+vector-outlined and the vertical chain could not be extracted. It is the only
+number in the design with that status, and it is the one everything vertical hangs
+from.
+
+It fails in two visible ways, both cheap to fix:
+
+| What you see on a dry fit | What it means | Fix |
+|---|---|---|
+| Switches do not reach the plate; the plate sits proud of the case rim | the real gap is larger than 3.5 mm | raise `choc_plate_gap` by 0.25-0.5 and re-print |
+| The plate presses the switches down / the case will not close flush | the real gap is smaller | lower `choc_plate_gap` by 0.25-0.5 and re-print |
+
+`choc_plate_gap` lives in `cad/interlock_params.scad`; `case_depth` is derived from
+it, so nothing else needs editing and `tests/test_models.js` will confirm the
+stackup is still self-consistent. Two 20-minute prints settle it either way, and
+that is exactly why the dry fit comes before the PCB order.
+
 ## Known fit issues to check on your own hardware
 
-These are called out because they depend on the exact part you buy, and the model
-assumes a typical part:
-
-- **Slide switch.** The case has a through-slot plus a finger recess in the outer
-  side wall, and the PCB places the switch 2.05 mm from the outer board edge so
-  its actuator sits inside the wall thickness. Measure your switch: body height
-  and actuator travel vary between MSK-12D19 clones. If your part is taller, edit
-  `sw_y_pcb` in `cad/interlock_case.scad` and the matching `swX/swY` in
-  `pcb/generate_pcb.js`, and re-print.
+- **Slide switch.** An MSK-12D19 is 9.0 x 3.5 mm with ~3.5 mm body and ~2.0 mm of
+  actuator on the **top** face, travelling along its 9 mm axis. The case therefore
+  has no cutout for it at all: the switch is operated from above, through the open
+  controller bay, and its actuator ends up about 0.8 mm above the case rim. If your
+  part is a clone with a taller body it may foul nothing but will stand proud; if
+  it is shorter you may not reach it. Pin pitch is unverified - check it against
+  the PCB before soldering.
+- **Encoder.** The board has the two 2.8 x 1.5 mm mounting-post slots the EC11
+  stands on. The plate clears a 13.5 mm square for a 12.0 x 12.2 mm body. If your
+  encoder is a taller variant it may foul the plate: the body height is the one
+  EC11 dimension that could not be verified.
 - **Controller height.** The controller bay is open at the top, so a socketed
-  nice!nano with headers fits; a castellated one sits lower.
-- **Cell thickness.** `battery_t = 4.0` in `cad/interlock_params.scad`. A 5 mm
-  pouch does not fit under the PCB in this case - it needs `standoff_h` raised and
-  a re-print of both halves.
+  nice!nano with headers fits; a castellated one sits lower. The bay is 2 mm short
+  of the plate so a 33.02 mm nice!nano clears it.
+- **Cell.** `battery_t = 4.5` in `cad/interlock_params.scad`, for a protected
+  LP402030 pack (~34 mm long with its PCM board). A 5 mm pouch does not fit under
+  the PCB - it needs `standoff_h` raised and a re-print of both halves.

@@ -121,12 +121,14 @@ edges instead of a straight plane. That changes the case outline, the joint and
 the plate outline, and the dead zone drops to about 24 mm. Not a blocker; a real
 design change.
 
-### P1-2. Cell capacity is 250 mAh, not 500–800 mAh
+### P1-2. Cell capacity is 200 mAh, not 500–800 mAh
 
 `standoff_h = 5.5 mm` puts the PCB 5.5 mm above the floor, which is what a 4 mm
 pouch plus wires and protection actually needs. A 5 mm 503040 cell — the one the
 old BOM specified — **does not fit**. The build now specifies a 402030
-(4 × 20 × 30 mm, ~250 mAh), which is honestly ~2–3 weeks between charges.
+(4 × 20 × 30 mm cell, but the PCM board makes the pack ~34 mm and it is rated
+**200 mAh**, not the 250 an earlier pass assumed), which is honestly **1–2 weeks**
+between charges.
 
 Battery life figures in `docs/architecture.md` have been corrected. If you want
 500 mAh, raise `standoff_h` to ~7 mm in `cad/interlock_params.scad` and re-print
@@ -225,5 +227,5 @@ XIAO and that the other two are firmware-only targets.
 - **The encoder's plate clearance** (13.5 mm square) against your specific EC11.
 - **RF performance** of the docked assembly, with the two radios ~150 mm apart and
   magnets 15 mm from each antenna.
-- **Battery runtime.** The 2–3 week figure is arithmetic from a 250 mAh cell and a
+- **Battery runtime.** The 1–2 week figure is arithmetic from a 200 mAh pack and a
   typical nRF52840 peripheral duty cycle, not a measurement.

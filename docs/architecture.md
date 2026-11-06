@@ -38,8 +38,8 @@ Bluetooth profiles remain available by switching the dongle's output
 (`&out OUT_BLE`), so the same board pairs with a phone or tablet.
 
 Battery cost of the topology: each peripheral holds one BLE link to the central.
-With `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=900000` (15 min) and a ~250 mAh 402030 cell,
-expect **2–3 weeks** between charges, not months. The case cannot take a thicker
+With `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=900000` (15 min) and a ~200 mAh protected
+LP402030 pack, expect **1–2 weeks** between charges, not months. The case cannot take a thicker
 cell without raising `standoff_h` and re-printing both halves.
 
 ## 3. The interlock
@@ -78,7 +78,7 @@ re-checked by `tests/test_models.js`.
 Cell → JST-PH on the PCB → slide switch → nice!nano `RAW` (its `B+`). Ground returns
 directly. The cell must be a protected pouch: the nice!nano's charger handles
 charging only and provides no over-discharge or over-current protection. Charge
-current is fixed at 100 mA, so a ~250 mAh cell sits at C/2.5 and the boost jumper
+current is fixed at 100 mA, so a ~200 mAh pack sits at C/2 and the boost jumper
 must stay open.
 
 The nice!nano measures its own cell through VDDH (`zmk,battery-nrf-vddh`), so no
@@ -98,5 +98,8 @@ floor top    = PCB bottom - standoff_h         (cell + socket clearance)
 ```
 
 Choc: 1.2 + 3.5 + 1.6 + 5.5 + 2.4 = **14.2 mm**. MX: 1.5 + 5.0 + 1.6 + 5.5 + 2.4 =
-**16.0 mm**. Changing any one of these re-derives the case, and
+**16.0 mm**. Of those five numbers the 3.5 mm Choc plate gap is the only one that is
+inferred rather than read off a drawing - see [part-dimensions.md](part-dimensions.md)
+and the tolerance procedure in [assembly.md](assembly.md). Changing any one of these
+re-derives the case, and
 `tests/test_models.js` fails if an exported part disagrees with the sum.

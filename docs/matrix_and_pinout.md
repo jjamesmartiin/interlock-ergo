@@ -62,4 +62,4 @@ The right half hosts a 5-row × 9-column matrix.
 - **Power Switch:** SPDT mini slide switch (MSK-12D19) connected in series between LiPo positive terminal and nice!nano `B+` pad.
 - **Battery Negative:** Direct to nice!nano `B-` / `GND`.
 - **Battery Fuel Gauge:** nice!nano v2 measures cell voltage directly via internal VDDH (`zmk,battery-nrf-vddh`). No divider, no ADC pin.
-- **Cell:** protected 402030 pouch (~250 mAh). The controller bay is sized for a 4 mm cell; a 5 mm pouch does not fit.
+- **Cell:** protected LP402030 pack (~200 mAh; a 4 mm cell, but the PCM board makes the pack ~34 mm long and 4.5 mm thick with tape). The bay is sized for that; a 5 mm pouch does not fit.

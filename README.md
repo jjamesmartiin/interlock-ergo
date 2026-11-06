@@ -120,6 +120,8 @@ macros - there is no macro engine in the default keymap.
 │   ├── assembly.md                   # build order, torque, magnet polarity, flash steps
 │   ├── bom.md                        # parts with vendor links
 │   ├── matrix_and_pinout.md          # GPIO map and power tree
+│   ├── part-dimensions.md            # every dimension the CAD rests on, with sources
+│   ├── part-dimensions.md            # every dimension the CAD rests on, with sources
 │   ├── generate_layout.js            # draws docs/images/layout.svg from the real numbers
 │   └── production-readiness-audit.md # adversarial review of the current tree
 ├── pcb/generate_pcb.js               # KiCad board generator + router + DRC gate
@@ -174,15 +176,15 @@ Full sourcing with vendor links: [docs/bom.md](docs/bom.md).
 | EC11 rotary encoder | 1 | left half only |
 | MSK-12D19 slide switch | 2 | power, one per half |
 | JST-PH 2.0 | 2 | cell connector |
-| Protected LiPo pouch, 402030 (4 × 20 × 30 mm) | 2 | ~250 mAh, **must** have a PCM |
+| Protected LiPo pouch, LP402030 (4 × 20 × 30 mm cell) | 2 | ~200 mAh, **must** have a PCM — the PCM adds ~3.2 mm, so allow 34 mm overall |
 | 6 × 3 mm N52 disc magnets | 4 | two per seam |
 | M2 × 5 self-tapping screws | 8 | four per half |
 | Plates | 1 pair | 3D printed, or 1.2 mm FR4 for Choc |
 
-Battery reality check: the controller bay takes a 4 mm cell, so a 402030 is what
-fits. That is roughly 250 mAh, which with `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=900000`
-is around **2-3 weeks between charges**, not months. A bigger cell needs a taller
-`standoff_h` in `cad/interlock_params.scad` and a re-print.
+Battery reality check: the controller bay takes a 4.5 mm pack, and the documented
+402030 is a **200 mAh** cell — not 250. With `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=900000`
+that is roughly **1-2 weeks between charges**, not months. A bigger cell needs a
+taller `standoff_h` in `cad/interlock_params.scad` and a re-print of both halves.
 
 ---
 
@@ -259,8 +261,10 @@ soldered or typed on. Before ordering PCBs, print one half and dry-fit it - see
 step 1 of [docs/assembly.md](docs/assembly.md).
 
 Known limitations, in full: [docs/production-readiness-audit.md](docs/production-readiness-audit.md)
-(67 mm docked centre gap, 250 mAh cell ceiling, assumed switch-body fit, no
-schematic).
+(67 mm docked centre gap, 200 mAh cell ceiling, no schematic).
+
+Every mechanical dimension the CAD rests on, and where it came from:
+[docs/part-dimensions.md](docs/part-dimensions.md).
 
 ## License
 

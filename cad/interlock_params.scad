@@ -27,11 +27,12 @@ seam_wall       = 6.0;   // thicker: it has to carry the dovetail socket
 fillet_r        = 3.0;
 pcb_clearance   = 0.6;   // total X/Y slop around the PCB (0.3 per side)
 
-// Cell: a 402030 protected pouch (4.0 x 20 x 30 mm) sits under the PCB in the
-// controller bay. Anything thicker needs a taller standoff_h.
-battery_l      = 30.0;
-battery_w      = 20.0;
-battery_t      = 4.0;
+// Cell: a protected LP402030 pouch. The cell is 4.0 x 20 x 30 mm but the PCM
+// protection board adds ~3.2 mm on one end, so the pack is ~34 mm long; allow 35.
+// Rated 200 mAh. A 503040 does not fit - see docs/assembly.md.
+battery_l      = 35.0;
+battery_w      = 21.0;
+battery_t      = 4.5;   // pack + tape
 battery_recess = 1.0;   // locating recess in the floor
 
 // Kailh Choc v1 (Corne/crkbd low-profile)
@@ -39,7 +40,14 @@ choc_pitch_x            = 18.0;
 choc_pitch_y            = 17.0;
 choc_switch_cutout      = 14.0;  // Kailh's 13.8 +/- 0.2, taken at the upper bound
 choc_plate_thickness    = 1.2;   // Choc retention barbs only latch in 1.2mm
-choc_plate_gap          = 3.5;   // plate underside -> PCB top, under the switch body
+choc_plate_gap          = 3.5;   // plate underside -> PCB top, under the switch body.
+                                 // INFERRED, not read: Kailh's PG1350 drawing is a vector
+                                 // outline with no text layer. The recovered chain (body
+                                 // 5.00 tall, 1.30 plate seat, 4.70 to the seat top) is
+                                 // consistent with 3.5 + 1.2 plate. This is the only
+                                 // dimension here that is not from a drawing, and every
+                                 // vertical number hangs off it - see docs/assembly.md for
+                                 // the dry-fit procedure that settles it in two prints.
 
 // Cherry MX
 mx_pitch_x           = 19.05;
@@ -103,6 +111,7 @@ assert(tab_protrusion <= seam_wall - 1.0,
 assert(magnet_pocket_depth <= seam_wall - 1.5,
        "magnet pocket would leave less than 1.5mm behind it; thicken seam_wall");
 assert(tab_head > tab_throat, "the dovetail must be wider at the tip than at the throat");
+assert(battery_t < standoff_h, "the cell is taller than the space under the PCB");
 assert(plate_off_x + plate_w(cols_left, choc_pitch_x) < pcb_w(cols_left, choc_pitch_x),
        "plate overhangs the PCB on the left half");
 assert(plate_off_x + plate_w(cols_right, choc_pitch_x) < pcb_w(cols_right, choc_pitch_x),

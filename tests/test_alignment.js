@@ -329,8 +329,11 @@ if (meshChecked) console.log(`✓ ${meshChecked} plate/case pairs: every apertur
 // SW_choc_v1_HS_CPG135001S30_1u / SW_MX_HS_CPG151101S11 and ergogen's choc.js and
 // mx.js, which agree. A pad on the pin position is invisible to DRC and to the
 // netlist check - it is electrically perfect and mechanically unsolderable.
-const OUTBOARD_MIN = 3.15;
-const OUTBOARD_MAX = 3.40;
+// Choc: marbastlib and keebio agree on 3.245. MX: ergogen says 3.275/3.302,
+// marbastlib says 3.55 - the sources disagree by 0.275mm, which a 2.55mm-wide pad
+// absorbs, so the window covers both rather than picking a winner.
+const OUTBOARD_MIN = 3.10;
+const OUTBOARD_MAX = 3.60;
 
 for (const b of boards) {
     if (!fs.existsSync(b.file)) continue;

@@ -18,7 +18,7 @@ plate_t  = is_mx ? mx_plate_thickness : choc_plate_thickness;
 case_d   = is_mx ? mx_case_depth : choc_case_depth;
 
 // PCB-side component envelope, mirrored from pcb/generate_pcb.js.
-mcu_y_pcb = 16.0;   // controller pad grid centre, from pcb/generate_pcb.js
+mcu_y_pcb = 17.0;   // controller pad grid centre, from pcb/generate_pcb.js
 sw_y_pcb  = 12.0;   // power switch centre, same source
 
 module half_case(half) {
@@ -43,11 +43,12 @@ module half_case(half) {
     plate_y = cav_y + plate_off_y;
     ledge_z = case_d - plate_t;
 
-    out_x   = seam_on_right ? 0 : case_w;          // outer side wall plane
+    // (no `out_x`: the power switch is reached from above, through the open bay)
 
     mcu_x   = cav_x + pw / 2;
     pcb_top = floor_thickness + standoff_h + pcb_thickness;
-    sw_x    = cav_x + (seam_on_right ? 2.05 : pw - 2.05);
+    // The slide switch sits at PCB (2.05, 12) on each half, on the outer side; it needs
+    // no case feature because it is operated from above through the open bay.
 
     // Cell locating recess, centred in the controller bay under the PCB.
     bat_x = cav_x + pw / 2 - battery_l / 2;
@@ -84,21 +85,23 @@ module half_case(half) {
             translate([plate_x - 0.25, plate_y - 0.25, ledge_z])
                 cube([plate_pw + 0.5, plate_pl + 0.5, plate_t + 1]);
 
-            // Controller bay stays open: the nice!nano and its reset button are
-            // only reachable from the top. Leaves a 3mm ledge above the plate.
+            // Controller bay stays open: the nice!nano, its reset button and the power
+            // switch are only reachable from the top. A 2mm ledge is left above the
+            // plate: the bay has to be at least 33.02mm deep (nice!nano length) plus
+            // the 8mm PCB margin, which a 3mm ledge did not leave room for.
             translate([cav_x, cav_y, ledge_z])
-                cube([cav_w, plate_y - 3.0 - cav_y, case_d - ledge_z + 1]);
+                cube([cav_w, plate_y - 2.0 - cav_y, case_d - ledge_z + 1]);
 
             // USB-C window through the front wall, aligned with the controller.
             translate([mcu_x, cav_y + 1, pcb_top + 2.0])
                 cube([10.0, wall_thickness + 4, 4.6], center = true);
 
-            // Power switch: through-slot in the outer wall at the actuator height,
-            // plus a finger recess centred on the wall face (1.2mm relieved outside).
-            translate([out_x, cav_y + sw_y_pcb, pcb_top + 1.1])
-                cube([wall_thickness + 4, 6.0, 4.0], center = true);
-            translate([out_x, cav_y + sw_y_pcb, pcb_top + 1.1])
-                cube([2.4, 12.0, 6.0], center = true);
+            // The power switch needs no cutout. An MSK-12D19 is 3.5mm thick with its
+            // actuator on the TOP face and ~2.0mm of travel along its 9mm axis, so it
+            // is operated from above, not through a side wall. Its actuator sits at
+            // pcb_top + 5.5 = 15.0mm, above the 14.2mm case rim, inside the open
+            // controller bay. A side slot would have been at the wrong height and the
+            // wrong axis - verified against the LCSC C2904913 body drawing.
 
             // Cell locating recess in the bay floor.
             translate([bat_x, bat_y, floor_thickness - battery_recess])

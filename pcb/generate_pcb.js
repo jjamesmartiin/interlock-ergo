@@ -858,49 +858,64 @@ function generateKiCadPCB(opts) {
         let pad1X, pad1Y, pad2X, pad2Y;
 
         if (!isEncoderPos) {
-            if (isChoc) {
-                // Kailh Choc v1 (Corne/crkbd style 2-prong)
-                pad1X = parseFloat(x);
-                pad1Y = parseFloat(y) - 5.9;
-                pad2X = parseFloat(x) + 5.0;
-                pad2Y = parseFloat(y) - 3.8;
+            // Switch + Kailh hotswap socket.
+            //
+            // Geometry verified against marbastlib's SW_choc_v1_HS_CPG135001S30_1u
+            // and SW_MX_HS_CPG151101S11, and ergogen's choc.js / mx.js. Both agree:
+            //   - the switch pins get a 3.0mm clearance hole for the socket body,
+            //     NOT a solder pad; the socket grips the pin through that hole
+            //   - the socket's two solder pads sit 3.25-3.55mm OUTBOARD of the pins
+            //
+            // The previous footprint put the SMD pads directly on the pin positions
+            // with no clearance holes, which no hotswap socket can be soldered to.
+            // This is hotswap-only: the pin holes are unplated, so a switch cannot be
+            // soldered in directly, which matches what this kit ships with.
+            const sw = { x: parseFloat(x), y: parseFloat(y) };
 
-                pcbContent += `  (footprint "Kailh_Choc_V1_CPG135001S30" (layer "B.Cu")
-    (at ${x} ${y})
-    (fp_text reference "${swRef}" (at 0 3.0) (layer "B.SilkS"))
-    (pad "" np_thru_hole circle (at 0 0) (size 3.4 3.4) (drill 3.4) (layers *.Cu *.Mask))
-    (pad "" np_thru_hole circle (at -5.5 0) (size 1.9 1.9) (drill 1.9) (layers *.Cu *.Mask))
-    (pad "" np_thru_hole circle (at 5.5 0) (size 1.9 1.9) (drill 1.9) (layers *.Cu *.Mask))
-    (pad "1" smd rect (at 0 -5.9) (size 2.5 1.6) (layers "B.Cu" "B.Paste" "B.Mask") (net ${colNet.id} "${colNet.name}"))
-    (pad "2" smd rect (at 5.0 -3.8) (size 2.5 1.6) (layers "B.Cu" "B.Paste" "B.Mask") (net ${diodeNet.id} "${diodeNet.name}"))
-  )\n`;
-                rec({ ref: swRef, num: '1', x: pad1X, y: pad1Y, net: colNet.id, kind: 'rect', hw: 1.25, hh: 0.8, layers: [1] });
-                rec({ ref: swRef, num: '2', x: pad2X, y: pad2Y, net: diodeNet.id, kind: 'rect', hw: 1.25, hh: 0.8, layers: [1] });
-                hole(parseFloat(x), parseFloat(y), 1.7);
-                hole(parseFloat(x) - 5.5, parseFloat(y), 0.95);
-                hole(parseFloat(x) + 5.5, parseFloat(y), 0.95);
-            } else {
-                // Cherry MX Hotswap
-                pad1X = parseFloat(x) - 3.81;
-                pad1Y = parseFloat(y) - 2.54;
-                pad2X = parseFloat(x) + 2.54;
-                pad2Y = parseFloat(y) - 5.08;
+            // Socket solder pads, outboard of each pin. Pin 1 is the column side,
+            // pin 2 goes through that key's diode; which physical pin is which does
+            // not matter electrically, only that each pad is outboard of its pin.
+            const pads = isChoc
+                ? {
+                    pinA: { x: 0, y: -5.95 }, pinB: { x: 5, y: -3.75 },
+                    padA: { x: -3.275, y: -5.95, w: 2.6, h: 2.6 },
+                    padB: { x: 8.275, y: -3.75, w: 2.6, h: 2.6 },
+                    centre: 3.429, peg: 1.7018, pegX: 5.5, pinHole: 3.0,
+                    name: 'Kailh_Choc_V1_CPG135001S30', refY: 3.0
+                }
+                : {
+                    pinA: { x: -3.81, y: -2.54 }, pinB: { x: 2.54, y: -5.08 },
+                    padA: { x: -7.085, y: -2.54, w: 2.55, h: 2.5 },
+                    padB: { x: 5.842, y: -5.08, w: 2.55, h: 2.5 },
+                    centre: 3.9878, peg: 1.75, pegX: 5.08, pinHole: 3.0,
+                    name: 'Kailh_MX_CPG151101S11', refY: 3.5
+                };
 
-                pcbContent += `  (footprint "Kailh_MX_CPG151101S11" (layer "B.Cu")
+            pad1X = sw.x + pads.padA.x;
+            pad1Y = sw.y + pads.padA.y;
+            pad2X = sw.x + pads.padB.x;
+            pad2Y = sw.y + pads.padB.y;
+
+            const f = (n) => n.toFixed(3);
+            pcbContent += `  (footprint "${pads.name}" (layer "B.Cu")
     (at ${x} ${y})
-    (fp_text reference "${swRef}" (at 0 3.5) (layer "B.SilkS"))
-    (pad "" np_thru_hole circle (at 0 0) (size 4.0 4.0) (drill 4.0) (layers *.Cu *.Mask))
-    (pad "" np_thru_hole circle (at -5.08 0) (size 1.7 1.7) (drill 1.7) (layers *.Cu *.Mask))
-    (pad "" np_thru_hole circle (at 5.08 0) (size 1.7 1.7) (drill 1.7) (layers *.Cu *.Mask))
-    (pad "1" smd rect (at -3.81 -2.54) (size 2.5 1.6) (layers "B.Cu" "B.Paste" "B.Mask") (net ${colNet.id} "${colNet.name}"))
-    (pad "2" smd rect (at 2.54 -5.08) (size 2.5 1.6) (layers "B.Cu" "B.Paste" "B.Mask") (net ${diodeNet.id} "${diodeNet.name}"))
+    (fp_text reference "${swRef}" (at 0 ${pads.refY}) (layer "B.SilkS"))
+    (pad "" np_thru_hole circle (at 0 0) (size ${f(pads.centre)} ${f(pads.centre)}) (drill ${f(pads.centre)}) (layers *.Cu *.Mask))
+    (pad "" np_thru_hole circle (at ${-pads.pegX} 0) (size ${f(pads.peg)} ${f(pads.peg)}) (drill ${f(pads.peg)}) (layers *.Cu *.Mask))
+    (pad "" np_thru_hole circle (at ${pads.pegX} 0) (size ${f(pads.peg)} ${f(pads.peg)}) (drill ${f(pads.peg)}) (layers *.Cu *.Mask))
+    (pad "" np_thru_hole circle (at ${f(pads.pinA.x)} ${f(pads.pinA.y)}) (size ${f(pads.pinHole)} ${f(pads.pinHole)}) (drill ${f(pads.pinHole)}) (layers *.Cu *.Mask))
+    (pad "" np_thru_hole circle (at ${f(pads.pinB.x)} ${f(pads.pinB.y)}) (size ${f(pads.pinHole)} ${f(pads.pinHole)}) (drill ${f(pads.pinHole)}) (layers *.Cu *.Mask))
+    (pad "1" smd roundrect (at ${f(pads.padA.x)} ${f(pads.padA.y)}) (size ${pads.padA.w} ${pads.padA.h}) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.1) (net ${colNet.id} "${colNet.name}"))
+    (pad "2" smd roundrect (at ${f(pads.padB.x)} ${f(pads.padB.y)}) (size ${pads.padB.w} ${pads.padB.h}) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.1) (net ${diodeNet.id} "${diodeNet.name}"))
   )\n`;
-                rec({ ref: swRef, num: '1', x: pad1X, y: pad1Y, net: colNet.id, kind: 'rect', hw: 1.25, hh: 0.8, layers: [1] });
-                rec({ ref: swRef, num: '2', x: pad2X, y: pad2Y, net: diodeNet.id, kind: 'rect', hw: 1.25, hh: 0.8, layers: [1] });
-                hole(parseFloat(x), parseFloat(y), 2.0);
-                hole(parseFloat(x) - 5.08, parseFloat(y), 0.85);
-                hole(parseFloat(x) + 5.08, parseFloat(y), 0.85);
-            }
+
+            rec({ ref: swRef, num: '1', x: pad1X, y: pad1Y, net: colNet.id, kind: 'rect', hw: pads.padA.w / 2, hh: pads.padA.h / 2, layers: [1] });
+            rec({ ref: swRef, num: '2', x: pad2X, y: pad2Y, net: diodeNet.id, kind: 'rect', hw: pads.padB.w / 2, hh: pads.padB.h / 2, layers: [1] });
+            hole(sw.x, sw.y, pads.centre / 2);
+            hole(sw.x - pads.pegX, sw.y, pads.peg / 2);
+            hole(sw.x + pads.pegX, sw.y, pads.peg / 2);
+            hole(sw.x + pads.pinA.x, sw.y + pads.pinA.y, pads.pinHole / 2);
+            hole(sw.x + pads.pinB.x, sw.y + pads.pinB.y, pads.pinHole / 2);
 
             // SOD-123 Diode (Pad 1: Cathode -> ROWr; Pad 2: Anode -> SW_D_r_c)
             const dx = (parseFloat(x) - 4.5).toFixed(2);

@@ -306,3 +306,61 @@ for (const [variant, v] of Object.entries(variants)) {
 }
 
 if (meshChecked) console.log(`✓ ${meshChecked} plate/case pairs: every aperture, web and rebate is where the plan says.`);
+
+// ------------------------------------------------------- hotswap footprint
+//
+// The one defect that produces a scrap board rather than a build problem. A
+// hotswap socket does not solder to the switch pin positions: its two solder pads
+// sit about 3.275mm outboard of the pins, and each pin needs a 3.0mm clearance hole
+// for the socket body to sit in. Verified against marbastlib's
+// SW_choc_v1_HS_CPG135001S30_1u / SW_MX_HS_CPG151101S11 and ergogen's choc.js and
+// mx.js, which agree. A pad on the pin position is invisible to DRC and to the
+// netlist check - it is electrically perfect and mechanically unsolderable.
+const OUTBOARD_MIN = 3.15;
+const OUTBOARD_MAX = 3.40;
+
+for (const b of boards) {
+    if (!fs.existsSync(b.file)) continue;
+    const text = fs.readFileSync(b.file, 'utf8');
+    const chunks = text.split('(footprint "').slice(1)
+        .filter((chunk) => /^Kailh_(Choc|MX)_/.test(chunk));
+
+    const bad = [];
+    for (const chunk of chunks) {
+        const pads = [];
+        for (const m of chunk.matchAll(/\(pad "([^"]*)" (\w+) (\w+) \(at (-?[\d.]+) (-?[\d.]+)[^)]*\)/g)) {
+            const window = chunk.slice(m.index, m.index + 420);
+            const size = window.match(/\(size ([\d.]+) ([\d.]+)\)/);
+            const drill = window.match(/\(drill ([\d.]+)/);
+            pads.push({
+                num: m[1], type: m[2],
+                x: parseFloat(m[4]), y: parseFloat(m[5]),
+                w: size ? parseFloat(size[1]) : null,
+                drill: drill ? parseFloat(drill[1]) : null
+            });
+        }
+        const smd = pads.filter((p) => p.type === 'smd');
+        const pinHoles = pads.filter((p) => p.type === 'np_thru_hole' && p.drill !== null && Math.abs(p.drill - 3.0) < 0.01);
+
+        if (smd.length !== 2) bad.push(`${smd.length} solder pads, expected 2`);
+        if (pinHoles.length !== 2) bad.push(`${pinHoles.length} 3.0mm pin clearance holes, expected 2`);
+
+        for (const pad of smd) {
+            const host = pinHoles.reduce((best, h) => {
+                const d = Math.hypot(pad.x - h.x, pad.y - h.y);
+                return d < best.d ? { d, h } : best;
+            }, { d: Infinity, h: null });
+            if (!host.h) continue;
+            const outboard = Math.abs(pad.x - host.h.x);
+            if (Math.abs(pad.y - host.h.y) > 0.01 || outboard < OUTBOARD_MIN || outboard > OUTBOARD_MAX) {
+                bad.push(`pad ${pad.num} at (${pad.x}, ${pad.y}) is ${outboard.toFixed(3)}mm outboard of its pin hole - expected ${OUTBOARD_MIN}-${OUTBOARD_MAX}mm, same y`);
+            }
+            if (pad.w === null || pad.w < 2.5) bad.push(`pad ${pad.num} is only ${pad.w}mm wide; the socket tab needs >=2.5mm`);
+        }
+    }
+    assert.strictEqual(bad.length, 0,
+        `${path.basename(b.file)}: hotswap footprint is not solderable - ${[...new Set(bad)].slice(0, 3).join('; ')}`);
+    console.log(`  ok ${path.basename(b.file).padEnd(38)} ${chunks.length} hotswap footprints: pads outboard of 3.0mm pin holes`);
+}
+
+console.log('✓ Every hotswap footprint matches the socket, not the switch pin.');

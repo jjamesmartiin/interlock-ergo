@@ -169,7 +169,7 @@ Full sourcing with vendor links: [docs/bom.md](docs/bom.md).
 | nice!nano v2 | 2 | one per half, castellated or socketed |
 | Seeed XIAO nRF52840 (BLE) | 1 | USB dongle (central) |
 | Kailh Choc v1 PG1350 **or** Cherry MX switches | 76 | pick one variant, not both |
-| Kailh hotswap sockets | 76 | Choc `CPG135001S30` / MX `CPG151101S11` |
+| Kailh hotswap sockets | 76 | Choc `CPG135001S30` / MX `CPG151101S11`. The pin holes are unplated: **hotswap only**, switches cannot be soldered in directly |
 | 1N4148W SOD-123 | 76 | one per key, plus one for the encoder |
 | EC11 rotary encoder | 1 | left half only |
 | MSK-12D19 slide switch | 2 | power, one per half |

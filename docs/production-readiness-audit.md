@@ -52,6 +52,17 @@ Result, from a clean `pcb/dist`:
 | left mx | 0 | 0 | 6406 | 89 |
 | right mx | 0 | 0 | 7581 | 111 |
 
+**A defect the router work exposed:** the original footprint put the hotswap
+solder pads *on the switch pin positions*. That is electrically perfect - the
+netlist check passes, DRC passes, the matrix works in simulation - and mechanically
+impossible: a Kailh socket does not solder to the pin, its two tabs land about
+3.3 mm outboard of it, and the pin needs a 3.0 mm clearance hole for the socket body
+to sit in. Found by checking against marbastlib’s `SW_choc_v1_HS_CPG135001S30_1u`
+and `SW_MX_HS_CPG151101S11` and ergogen’s `choc.js` / `mx.js`, which all agree.
+The footprints are now taken from those sources, and `tests/test_alignment.js`
+asserts the outboard offset and the pin clearance holes on all four boards -
+mutation-tested by moving a pad back onto its pin.
+
 DRC-clean is a *consequence* of the router, not a suppressed check: the gate still
 fails on violations or unconnected pads, and it now withdraws the previous fab
 artifacts **before** verifying, so a crash or a thrown assertion can never leave
@@ -197,6 +208,7 @@ XIAO and that the other two are firmware-only targets.
 | Access: USB-C window aligned to the controller edge, power actuator inside the wall, bay open for the controller and its reset button | geometry, cross-checked against `mcu_x`/`sw_x` in the generator |
 | Layout diagram matches the keymap | `docs/generate_layout.js` parses the keymap; 76 keys, labels match |
 | Every PCB switch footprint is on the plate's aperture grid, encoder included, and every key has its own diode net | `tests/test_alignment.js`, against all four boards |
+| Hotswap solder pads sit 3.15-3.40 mm outboard of a 3.0 mm pin clearance hole, as the socket requires | `tests/test_alignment.js`, mutation-tested |
 | The exported plate meshes really have a 14.0mm aperture where each key goes, material in the webs between them, and the case really has the rebate where the plate lands | `tests/test_alignment.js` samples the STLs with a tilted ray cast; mutation-tested by shifting the aperture grid 1mm |
 | Track width, via annular ring, pad annular ring and drill sizes are inside JLCPCB's 2-layer process limits - DRC cannot prove this, because KiCad's default minimums are 0 | `tests/test_fab_rules.js` |
 | Order quantity per design stays inside the 650 cm² area budget | `tests/test_fab_rules.js` (it is 3 for the left Choc board and 2 for the others, not 3 for all) |

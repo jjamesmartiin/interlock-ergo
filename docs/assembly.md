@@ -49,11 +49,17 @@ The switch sockets and the diodes go on the **bottom** of the PCB, opposite the
 switch side.
 
 1. Diodes first: 1N4148W in SOD-123, cathode (the banded end) toward the row net.
+   The diode sits up-and-left of each switch, on the same side as the sockets.
    The silkscreen marks `D1..Dn` and the PCB generator emits one diode per key,
    plus one for the encoder's push switch.
-2. Hotswap sockets next. Choc sockets are 2-pad SMD the same size as the switch
-   footprint cutouts; MX sockets are the larger body. There is exactly one socket
-   per key.
+2. Hotswap sockets next. Each switch footprint has two 2.6 mm round-rectangle SMD
+   pads sitting **about 3.3 mm outboard of the switch pins**, and a 3.0 mm
+   unplated hole at each pin. That is what a Kailh hotswap socket actually needs:
+   the socket body sits in the 3.0 mm hole and its two tabs solder to the outboard
+   pads. Do not expect the pads to line up with the pin holes - they are not
+   supposed to.
+   The pin holes are **unplated**, so this is a hotswap-only board: a switch
+   cannot be soldered in directly, because there is no copper at the pin.
 3. JST-PH socket for the cell, the slide switch in the controller bay, and the
    controller pads. Solder the controller **last**: socket it with 12-pin headers
    if you want to be able to replace it, or castellated-solder it if you want the

@@ -128,7 +128,8 @@ macros - there is no macro engine in the default keymap.
 └── tests/
     ├── test_matrix.js                # firmware matrix, Kconfig, stagger agreement
     ├── test_models.js                # mesh watertightness + dimension gate
-    └── test_alignment.js             # plate, case and PCB switch grids agree
+    ├── test_alignment.js             # PCB footprints vs plate apertures vs case rebate
+    └── test_fab_rules.js             # process limits + order quantity per design
 ```
 
 ---
@@ -138,7 +139,8 @@ macros - there is no macro engine in the default keymap.
 ```bash
 node tests/test_matrix.js     # firmware matrix, shield config, CAD/PCB stagger agreement
 node tests/test_models.js     # every STL is one watertight shell of the right size
-node tests/test_alignment.js  # PCB switch footprints sit on the plate's aperture grid
+node tests/test_alignment.js  # PCB footprints vs plate apertures vs case rebate, sampled in the meshes
+node tests/test_fab_rules.js   # JLCPCB process limits and the order quantity per design
 node cad/build_models.js      # rebuild all STLs
 node cad/render_preview.js    # rebuild the README renders
 node docs/generate_layout.js  # rebuild the layout diagram
@@ -192,10 +194,15 @@ is around **2-3 weeks between charges**, not months. A bigger cell needs a talle
 2. Order from JLCPCB: 2 layers, 1.6 mm, 1 oz copper, ENIG recommended for the
    hotswap pads, **3 pcs per design** (5 pcs crosses the 650 cm² order-area
    threshold and adds a large-order surcharge).
-3. `bom_*.csv` / `cpl_*.csv` are only emitted for diodes; hand-solder the
+3. **Quantity per design, not one number for everything.** The order-area budget is
+   650 cm² and the boards are different sizes, so the right quantity differs:
+   left Choc 3 pcs, right Choc 2, left MX 2, right MX 2. `node tests/test_fab_rules.js`
+   prints the numbers for however you regenerate the boards - re-check them on the
+   live JLCPCB quote, since the thresholds and fees change.
+4. `bom_*.csv` / `cpl_*.csv` are only emitted for diodes; hand-solder the
    sockets, headers, JST and slide switch. That is cheaper than JLCPCB's
    per-order PCBA fees at this volume.
-4. Order both design variants only if you intend to build both; each half is a
+5. Order both design variants only if you intend to build both; each half is a
    separate board because the halves are 34 and 42 keys and cannot be reversible.
 
 ### Printing
@@ -244,7 +251,7 @@ Local builds with Nix are available from `flake.nix`
 ## Status
 
 Every gate in this repository passes: the firmware matrix, the 3D-printed parts,
-the plate/PCB alignment, and the PCB DRC gate. All four boards route clean and
+the plate/case/PCB alignment, the PCB DRC gate, and the fabrication-rule limits. All four boards route clean and
 their JLCPCB gerber/BOM/CPL packages are in `pcb/dist/`.
 
 What has *not* happened is a physical build. Nothing here has been printed,

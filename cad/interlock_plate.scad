@@ -34,7 +34,9 @@ module switch_plate(half) {
                 if (half == "left" && r == 0 && c == 0) {
                     // Rotary encoder: the 12.4mm body sits on the PCB and passes
                     // straight through the plate, so this must be a through hole.
-                    translate([x0 + pitch_x / 2, y0 + pitch_y / 2, -1])
+                    // centre=true centres Z as well, so anchor it on the plate mid-plane
+                    // or the cut only reaches partway through and the body bottoms out.
+                    translate([x0 + pitch_x / 2, y0 + pitch_y / 2, plate_t / 2])
                         cube([enc_body, enc_body, plate_t + 2], center = true);
                 } else if (half == "left" && r == 4 && c == 5) {
                     // No switch here: the left bottom row skips a position.

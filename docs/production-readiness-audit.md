@@ -25,7 +25,7 @@ What has **not** happened is a physical build. Do the dry-fit in step 1 of
 | Case / plate / dongle CAD | ✅ buildable, gated by `tests/test_models.js`, dimensions derived from one stackup |
 | Firmware configuration | ✅ split transport, `col-offset`, per-shield `.conf`, `settings_reset` all correct |
 | Matrix ↔ CAD ↔ PCB agreement | ✅ gated by `tests/test_alignment.js` and by the generator itself |
-| PCB routing and fabrication output | ✅ 0 DRC violations, 0 unconnected, gerbers + BOM + CPL emitted |
+| PCB routing and fabrication output | ✅ 0 DRC violations, 0 unconnected, inside the fab's process limits, gerbers + BOM + CPL emitted |
 | Documentation | ✅ assembly guide, generated layout diagram, BOM with real part numbers |
 | Schematic capture | ⚠️ none — the netlist is code, diffed against the overlays on every build |
 
@@ -197,6 +197,9 @@ XIAO and that the other two are firmware-only targets.
 | Access: USB-C window aligned to the controller edge, power actuator inside the wall, bay open for the controller and its reset button | geometry, cross-checked against `mcu_x`/`sw_x` in the generator |
 | Layout diagram matches the keymap | `docs/generate_layout.js` parses the keymap; 76 keys, labels match |
 | Every PCB switch footprint is on the plate's aperture grid, encoder included, and every key has its own diode net | `tests/test_alignment.js`, against all four boards |
+| The exported plate meshes really have a 14.0mm aperture where each key goes, material in the webs between them, and the case really has the rebate where the plate lands | `tests/test_alignment.js` samples the STLs with a tilted ray cast; mutation-tested by shifting the aperture grid 1mm |
+| Track width, via annular ring, pad annular ring and drill sizes are inside JLCPCB's 2-layer process limits - DRC cannot prove this, because KiCad's default minimums are 0 | `tests/test_fab_rules.js` |
+| Order quantity per design stays inside the 650 cm² area budget | `tests/test_fab_rules.js` (it is 3 for the left Choc board and 2 for the others, not 3 for all) |
 
 ## Not verified — do not assume
 

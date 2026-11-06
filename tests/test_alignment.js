@@ -165,3 +165,144 @@ if (missing === boards.length) {
 } else {
     console.log('✓ Plate, case and PCB agree on every switch position.');
 }
+
+// ------------------------------------------------------------------ solids
+//
+// The PCB is only half the chain: the plate is generated in OpenSCAD and exported
+// to STL, so "the plate has a hole where the PCB has a switch" is a claim about a
+// mesh. These sample the exported meshes directly - a vertical ray-cast per point,
+// odd crossings means the point is inside the solid. That catches a plate whose
+// apertures drifted from the keymap, and a case whose plate rebate is not where the
+// plate is, which no dimension check would see.
+
+function loadTriangles(file) {
+    const buf = fs.readFileSync(file);
+    if (buf.length >= 84) {
+        const n = buf.readUInt32LE(80);
+        if (buf.length === 84 + n * 50) {
+            const out = [];
+            for (let i = 0; i < n; i++) {
+                const o = 84 + i * 50 + 12;
+                const v = [];
+                for (let k = 0; k < 9; k++) v.push(buf.readFloatLE(o + k * 4));
+                out.push([[v[0], v[1], v[2]], [v[3], v[4], v[5]], [v[6], v[7], v[8]]]);
+            }
+            return out;
+        }
+    }
+    const text = buf.toString('utf8');
+    const v = [...text.matchAll(/vertex\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)\s+(-?[\d.eE+-]+)/g)]
+        .map((m) => [parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3])]);
+    const out = [];
+    for (let i = 0; i + 2 < v.length; i += 3) out.push([v[i], v[i + 1], v[i + 2]]);
+    return out;
+}
+
+// True if (x, y, z) is inside the mesh: count crossings of a ray that is tilted a
+// hair off vertical (Moller-Trumbore). A straight +Z ray lands exactly on
+// triangulation edges whenever the sample point has a round coordinate, and the
+// crossing is then counted twice, flipping the parity. The tilt costs 0.016mm of
+// drift over a 1.2mm plate, which is nothing against a 0.2mm probe step.
+const RAY_X = 0.0137, RAY_Y = 0.0091;
+function insideMesh(tris, x, y, z) {
+    let crossings = 0;
+    for (const [a, b, c] of tris) {
+        const e1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+        const e2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+        const p = [RAY_Y * e2[2] - e2[1], e2[0] - RAY_X * e2[2], RAY_X * e2[1] - RAY_Y * e2[0]];
+        const det = e1[0] * p[0] + e1[1] * p[1] + e1[2] * p[2];
+        if (Math.abs(det) < 1e-12) continue;
+        const inv = 1 / det;
+        const tv = [x - a[0], y - a[1], z - a[2]];
+        const u = (tv[0] * p[0] + tv[1] * p[1] + tv[2] * p[2]) * inv;
+        if (u < 0 || u > 1) continue;
+        const q = [tv[1] * e1[2] - tv[2] * e1[1], tv[2] * e1[0] - tv[0] * e1[2], tv[0] * e1[1] - tv[1] * e1[0]];
+        const vv = (RAY_X * q[0] + RAY_Y * q[1] + q[2]) * inv;
+        if (vv < 0 || u + vv > 1) continue;
+        const t = (e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2]) * inv;
+        if (t > 0) crossings++;
+    }
+    return crossings % 2 === 1;
+}
+
+let meshChecked = 0;
+for (const [variant, v] of Object.entries(variants)) {
+    const plateT = variant === 'mx' ? c.mx_plate_thickness : c.choc_plate_thickness;
+    const caseDepth = c.floor_thickness + c.standoff_h + c.pcb_thickness +
+        (variant === 'mx' ? c.mx_plate_gap : c.choc_plate_gap) + plateT;
+    const ledgeZ = caseDepth - plateT;
+
+    for (const side of ['left', 'right']) {
+        const plateFile = path.join(rootDir, 'cad', 'dist', `interlock_plate_${variant}_${side}.stl`);
+        const caseFile = path.join(rootDir, 'cad', 'dist', `interlock_${variant}_${side}.stl`);
+        if (!fs.existsSync(plateFile) || !fs.existsSync(caseFile)) {
+            console.log(`  skip ${variant} ${side} meshes (run node cad/build_models.js)`);
+            continue;
+        }
+        const plate = loadTriangles(plateFile);
+        const kase = loadTriangles(caseFile);
+
+        // Plate-local aperture centre, from the same grid the plate module uses.
+        const apX = (r, col) => v.pitchX / 2 + col * v.pitchX + stagger[r] * v.pitchX;
+        const apY = (r) => v.pitchY / 2 + r * v.pitchY;
+        const zMid = plateT / 2;
+        const hasAp = (r, col) => hasSwitch(side, r, col) || (side === 'left' && r === 0 && col === 0);
+        const cols = COLS[side];
+
+        const bad = [];
+        // Each aperture is 14.0mm square (13.5 for the encoder body), so probe just
+        // inside and just outside its edge on both axes. That pins the hole to
+        // +/-0.25mm in position and edge-to-edge size - a uniform 1mm shift of the
+        // whole grid is invisible to a single centre sample, and this catches it.
+        const half = (r, col) => (side === 'left' && r === 0 && col === 0 ? 13.5 : c.choc_switch_cutout) / 2;
+        for (let r = 0; r < 5; r++) {
+            for (let col = 0; col < cols; col++) {
+                if (!hasAp(r, col)) continue;
+                const cx = apX(r, col), cy = apY(r), h = half(r, col);
+                const insideBy = h - 0.2, outsideBy = h + 0.3;
+                for (const [dx, dy, want] of [
+                    [-insideBy, 0, false], [insideBy, 0, false], [0, -insideBy, false], [0, insideBy, false],
+                    [-outsideBy, 0, true], [outsideBy, 0, true], [0, -outsideBy, true], [0, outsideBy, true]
+                ]) {
+                    const solid = insideMesh(plate, cx + dx, cy + dy, zMid);
+                    if (solid !== want) {
+                        bad.push(`row ${r} col ${col}: ${want ? "no material" : "no hole"} at ${dx >= 0 ? "+" : ""}${dx.toFixed(2)},${dy >= 0 ? "+" : ""}${dy.toFixed(2)} from the aperture centre`);
+                    }
+                }
+            }
+        }
+        // Web between horizontally adjacent apertures must be solid plate.
+        for (let r = 0; r < 5; r++) {
+            for (let col = 0; col + 1 < cols; col++) {
+                if (!hasAp(r, col) || !hasAp(r, col + 1)) continue;
+                if (!insideMesh(plate, apX(r, col) + v.pitchX / 2, apY(r), zMid)) {
+                    bad.push(`no material between row ${r} cols ${col}/${col + 1}`);
+                }
+            }
+        }
+        assert.strictEqual(bad.length, 0,
+            `interlock_plate_${variant}_${side}.stl: ${bad.slice(0, 4).join("; ")}`);
+
+        // The case must have the plate rebate where the plate actually is.
+        const wallL = side === 'left' ? c.wall_thickness : c.seam_wall;
+        const cavX = wallL + c.pcb_clearance / 2;
+        const cavY = c.wall_thickness + c.pcb_clearance / 2;
+        const px = cavX + MARGIN_X;
+        const py = cavY + TOP_BAY + MARGIN_Y;
+        const plateW = cols * v.pitchX + c.stagger_max_u * v.pitchX;
+        const plateL = 5 * v.pitchY;
+        const zAbove = ledgeZ + 0.2;
+
+        assert(!insideMesh(kase, px + plateW / 2, py + plateL / 2, zAbove),
+            `interlock_${variant}_${side}.stl: no opening for the plate at its centre - the plate would not drop in`);
+        assert(insideMesh(kase, wallL / 2, py + plateL / 2, zAbove),
+            `interlock_${variant}_${side}.stl: the seam wall is missing where the plate ledge should be`);
+        assert(!insideMesh(kase, px + plateW / 2, py + plateL / 2, ledgeZ - 0.2),
+            `interlock_${variant}_${side}.stl: the cavity is not open below the plate ledge`);
+
+        meshChecked++;
+        console.log(`  ok ${`${variant} ${side} plate + case`.padEnd(38)} apertures, webs and rebate sampled in the meshes`);
+    }
+}
+
+if (meshChecked) console.log(`✓ ${meshChecked} plate/case pairs: every aperture, web and rebate is where the plan says.`);

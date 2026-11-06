@@ -56,3 +56,5 @@ jobs:
         run: node pcb/generate_pcb.js
       - name: Plate, case and PCB must agree on every switch position
         run: node tests/test_alignment.js
+      - name: Process limits and order quantity
+        run: node tests/test_fab_rules.js

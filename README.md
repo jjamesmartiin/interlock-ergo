@@ -121,7 +121,6 @@ macros - there is no macro engine in the default keymap.
 │   ├── bom.md                        # parts with vendor links
 │   ├── matrix_and_pinout.md          # GPIO map and power tree
 │   ├── part-dimensions.md            # every dimension the CAD rests on, with sources
-│   ├── part-dimensions.md            # every dimension the CAD rests on, with sources
 │   ├── generate_layout.js            # draws docs/images/layout.svg from the real numbers
 │   └── production-readiness-audit.md # adversarial review of the current tree
 ├── pcb/generate_pcb.js               # KiCad board generator + router + DRC gate
@@ -194,16 +193,17 @@ taller `standoff_h` in `cad/interlock_params.scad` and a re-print of both halves
 
 1. `node pcb/generate_pcb.js`. Only DRC-clean boards are written to `pcb/dist/`.
 2. Order from JLCPCB: 2 layers, 1.6 mm, 1 oz copper, ENIG recommended for the
-   hotswap pads, **3 pcs per design** (5 pcs crosses the 650 cm² order-area
+   hotswap pads, at the quantity in item 3 (5 pcs crosses the 650 cm² order-area
    threshold and adds a large-order surcharge).
 3. **Quantity per design, not one number for everything.** The order-area budget is
    650 cm² and the boards are different sizes, so the right quantity differs:
    left Choc 3 pcs, right Choc 2, left MX 2, right MX 2. `node tests/test_fab_rules.js`
    prints the numbers for however you regenerate the boards - re-check them on the
    live JLCPCB quote, since the thresholds and fees change.
-4. `bom_*.csv` / `cpl_*.csv` are only emitted for diodes; hand-solder the
-   sockets, headers, JST and slide switch. That is cheaper than JLCPCB's
-   per-order PCBA fees at this volume.
+4. `bom_*.csv` / `cpl_*.csv` are only emitted for diodes, and the gerber zip
+   carries the `B.Paste` stencil layer for them. Order them placed, or hand-solder
+   them with everything else (sockets, headers, JST, slide switch) - hand-soldering
+   is cheaper than JLCPCB's per-order PCBA fees at this volume.
 5. Order both design variants only if you intend to build both; each half is a
    separate board because the halves are 34 and 42 keys and cannot be reversible.
 
@@ -246,7 +246,18 @@ If the halves stop connecting after a reflash or a controller swap, flash
 `settings_reset` on both halves and re-pair - it is built by the same workflow.
 
 Local builds with Nix are available from `flake.nix`
-(`nix build .#firmware-left`, `.#cad`, `.#pcb`).
+(`nix build .#firmware-left`, `.#firmware-right`, `.#firmware-dongle`, `.#cad`, `.#pcb`,
+or just `nix build` for the full release package).
+
+All three shields are built and checked in CI. Two firmware details are pinned
+rather than left to chance:
+
+- `config/west.yml` pins ZMK **v0.2** (Zephyr 3.5).
+- `flake.nix` pins the ARM compiler to **GCC 13**. nixpkgs' current
+  `gcc-arm-embedded` is GCC 15, which rejects ZMK v0.2's `int` → `void *`
+  `user_data` cast in `central_bas_proxy.c` as a hard error. Upstream only fixed
+  that after v0.3.0 ([zmkfirmware/zmk#3105](https://github.com/zmkfirmware/zmk/pull/3105)).
+  Move both pins together when you bump ZMK.
 
 ---
 

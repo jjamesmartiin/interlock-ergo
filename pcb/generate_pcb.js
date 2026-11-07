@@ -738,6 +738,7 @@ function generateKiCadPCB(opts) {
   (layers
     (0 "F.Cu" signal)
     (31 "B.Cu" signal)
+    (34 "B.Paste" user)
     (36 "B.SilkS" user "B.Silkscreen")
     (37 "F.SilkS" user "F.Silkscreen")
     (38 "B.Mask" user)
@@ -1151,7 +1152,10 @@ function generateKiCadPCB(opts) {
     if (fs.existsSync(gerberSubdir)) execSync(`rm -rf "${gerberSubdir}"`);
     fs.mkdirSync(gerberSubdir, { recursive: true });
 
-    execSync(`kicad-cli pcb export gerbers -o "${gerberSubdir}/" "${outPcbFile}"`);
+    // B.Paste is the stencil layer for the SOD-123 diodes: without it the BOM/CPL
+    // cannot be ordered as SMT assembly. Every SMD pad on this board is on the
+    // bottom, so there is no F.Paste to emit.
+    execSync(`kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.Mask,B.Mask,F.Silkscreen,B.Silkscreen,F.Courtyard,B.Courtyard,B.Paste,Edge.Cuts,Margin -o "${gerberSubdir}/" "${outPcbFile}"`);
     execSync(`kicad-cli pcb export drill -o "${gerberSubdir}/" "${outPcbFile}"`);
 
     pinTimestamps(gerberSubdir);

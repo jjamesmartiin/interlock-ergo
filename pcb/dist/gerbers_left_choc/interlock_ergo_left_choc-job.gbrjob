@@ -42,6 +42,11 @@
       "FilePolarity": "Positive"
     },
     {
+      "Path": "interlock_ergo_left_choc-B_Paste.gbp",
+      "FileFunction": "SolderPaste,Bot",
+      "FilePolarity": "Positive"
+    },
+    {
       "Path": "interlock_ergo_left_choc-F_Silkscreen.gto",
       "FileFunction": "Legend,Top",
       "FilePolarity": "Positive"
@@ -98,6 +103,10 @@
       "Type": "SolderMask",
       "Thickness": 0.01,
       "Name": "Bottom Solder Mask"
+    },
+    {
+      "Type": "SolderPaste",
+      "Name": "Bottom Solder Paste"
     },
     {
       "Type": "Legend",

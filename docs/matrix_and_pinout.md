@@ -44,7 +44,7 @@ The right half hosts a 5-row × 9-column matrix.
 - **Row 4:** `&pro_micro 8` -> `P1.04`
 
 ### Column GPIOs (Col Offset 7 assigned via `&default_transform`):
-- **Col 7:**  `&pro_micro 18` -> `P1.15` — **6, Y, N, Space_R** (no home-row key: the home row ends at Enter)
+- **Col 7:**  `&pro_micro 18` -> `P1.15` — **6, Y, H, N, Space_R** (the 6YHN column; all five rows are populated)
 - **Col 8:**  `&pro_micro 15` -> `P1.13` — 7, U, J, M, RAlt
 - **Col 9:**  `&pro_micro 14` -> `P1.11` — 8, I, K, Comma, Mo(2)
 - **Col 10:** `&pro_micro 16` -> `P0.10` — 9, O, L, Dot, RCtrl

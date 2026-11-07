@@ -13,12 +13,21 @@
   outputs = { self, nixpkgs, zmk-nix }:
     let
       forAllSystems = nixpkgs.lib.genAttrs (nixpkgs.lib.attrNames zmk-nix.packages);
+
+      # ZMK v0.2 (and v0.3.0) target the Zephyr SDK 0.16 toolchain (ARM GCC 12).
+      # nixpkgs' gcc-arm-embedded is now GCC 15, which rejects ZMK's
+      # `int` -> `void *` user_data cast in app/src/split/bluetooth/central_bas_proxy.c
+      # as a hard error. Upstream only fixed it after v0.3.0 (zmkfirmware/zmk#3105),
+      # so pin the newest compiler that still accepts the pinned ZMK: GCC 13 (it
+      # warns instead of erroring). Bump this when west.yml moves off v0.2.
+      armGcc = final: prev: { gcc-arm-embedded = prev.gcc-arm-embedded-13; };
+      mkPkgs = system: import nixpkgs { inherit system; overlays = [ armGcc ]; };
     in
     {
       packages = forAllSystems (system:
         let
-          pkgs = import nixpkgs { inherit system; };
-          zmk = zmk-nix.legacyPackages.${system};
+          pkgs = mkPkgs system;
+          zmk = zmk-nix.lib.buildersFor pkgs;
 
           srcFilter = nixpkgs.lib.sourceFilesBySuffices self [
             ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
@@ -32,7 +41,7 @@
             src = srcFilter;
             board = "nice_nano_v2";
             shield = "interlock_ergo_left";
-            zephyrDepsHash = "sha256-F03oJNHWmHlpFc1JHyvqX02WL+Pg6ZcNWpCaiDfJANA=";
+            zephyrDepsHash = "sha256-DOz+hpthxe7jyzZouYpe/aFy9RQgTFnIp+HUMmz3v50=";
           };
 
           firmware-right = zmk.buildKeyboard {
@@ -40,7 +49,7 @@
             src = srcFilter;
             board = "nice_nano_v2";
             shield = "interlock_ergo_right";
-            zephyrDepsHash = "sha256-F03oJNHWmHlpFc1JHyvqX02WL+Pg6ZcNWpCaiDfJANA=";
+            zephyrDepsHash = "sha256-DOz+hpthxe7jyzZouYpe/aFy9RQgTFnIp+HUMmz3v50=";
           };
 
           firmware-dongle = zmk.buildKeyboard {
@@ -48,7 +57,7 @@
             src = srcFilter;
             board = "seeeduino_xiao_ble";
             shield = "interlock_ergo_dongle";
-            zephyrDepsHash = "sha256-F03oJNHWmHlpFc1JHyvqX02WL+Pg6ZcNWpCaiDfJANA=";
+            zephyrDepsHash = "sha256-DOz+hpthxe7jyzZouYpe/aFy9RQgTFnIp+HUMmz3v50=";
           };
 
           # 2. 3D Printable CAD Meshes (OpenSCAD)
@@ -110,7 +119,7 @@
 
       devShells = forAllSystems (system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          pkgs = mkPkgs system;
         in
         {
           default = pkgs.mkShell {

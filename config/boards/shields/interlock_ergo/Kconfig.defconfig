@@ -22,7 +22,9 @@ config ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS
     default 2
 
 config ZMK_KEYBOARD_NAME
-    default "Interlock Ergo Dongle"
+    # Zephyr asserts the BLE device name is <= BT_DEVICE_NAME_MAX (16 incl. NUL).
+    # "Interlock Ergo Dongle" is 21 and fails the build; "Interlock Ergo" is 14.
+    default "Interlock Ergo"
 
 config ZMK_USB
     default y

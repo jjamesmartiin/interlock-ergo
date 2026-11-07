@@ -47,10 +47,10 @@ Result, from a clean `pcb/dist`:
 
 | Board | DRC | Unconnected | Segments | Vias |
 |---|---|---|---|---|
-| left choc | 0 | 0 | 5724 | 89 |
-| right choc | 0 | 0 | 5964 | 76 |
-| left mx | 0 | 0 | 6406 | 89 |
-| right mx | 0 | 0 | 7581 | 111 |
+| left choc | 0 | 0 | 5592 | 81 |
+| right choc | 0 | 0 | 6096 | 83 |
+| left mx | 0 | 0 | 6149 | 78 |
+| right mx | 0 | 0 | 6776 | 93 |
 
 **A defect the router work exposed:** the original footprint put the hotswap
 solder pads *on the switch pin positions*. That is electrically perfect - the
@@ -136,16 +136,17 @@ both halves; the entire case depth is derived from that constant.
 
 ### P1-3. The slide switch fit is assumed, not verified
 
-The case has a through-slot plus a finger recess in the outer side wall, and the
-PCB places `SW_PWR` 2.05 mm from the outer board edge so its actuator sits inside
-the 4 mm wall thickness. That assumes a MSK-12D19-class body of about
-3.5 mm × 8.7 mm with ~1.5 mm of actuator travel. **Clones differ.** Measure the
-part you buy; if the body is taller, the actuator is buried in the wall.
-`docs/assembly.md` documents the two constants to change.
+The case has **no cutout for the slide switch at all**: an MSK-12D19's actuator is
+on the *top* face, travelling along its 9 mm axis, so the switch is operated from
+above through the open controller bay and its actuator ends up about 0.8 mm proud
+of the 14.2 mm case rim. An earlier revision cut a slot in the outer side wall, at
+the wrong height and the wrong axis; it is gone. The PCB still places `SW_PWR`
+2.05 mm from the outer board edge so the body clears the 4 mm wall.
 
-The switch is also recessed, so it is operated with a fingernail through the
-recess rather than a proud tab. Documented, but it is a deliberate compromise
-forced by a 4 mm wall.
+That assumes a MSK-12D19-class body of about 3.5 mm × 9.0 mm × 5.5 mm overall.
+**Clones differ**, and the pin pitch is unverified — measure the part you buy
+against the PCB before soldering. `docs/part-dimensions.md` records which of these
+numbers came from a drawing and which are assumptions.
 
 ### P1-4. No antenna keep-out is modelled
 
@@ -180,7 +181,8 @@ XIAO and that the other two are firmware-only targets.
   re-declares `chosen` nodes the `.dtsi` already sets. Both benign.
 - `interlock_ergo_left.conf` carries `CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_*`
   which are gated on `ZMK_SPLIT_ROLE_CENTRAL` and therefore dropped on a
-  peripheral. Harmless, misleading.
+  peripheral. Harmless, misleading. **Fixed:** they now live only in
+  `interlock_ergo_dongle.conf`, which is the central.
 - The keymap's adjust layer binds `&bootloader` on both halves, which on a
   peripheral boots that half only. Fine, but worth a line in the docs.
 - No `.zmk.yml` metadata, so the board will not appear in ZMK's hardware index.
@@ -214,6 +216,9 @@ XIAO and that the other two are firmware-only targets.
 | The exported plate meshes really have a 14.0mm aperture where each key goes, material in the webs between them, and the case really has the rebate where the plate lands | `tests/test_alignment.js` samples the STLs with a tilted ray cast; mutation-tested by shifting the aperture grid 1mm |
 | Track width, via annular ring, pad annular ring and drill sizes are inside JLCPCB's 2-layer process limits - DRC cannot prove this, because KiCad's default minimums are 0 | `tests/test_fab_rules.js` |
 | Order quantity per design stays inside the 650 cm² area budget | `tests/test_fab_rules.js` (it is 3 for the left Choc board and 2 for the others, not 3 for all) |
+| **All three shields compile, link and emit `zmk.uf2`** | `nix build .#firmware-{left,right,dongle}` on ARM GCC 13.3 — left 21.00 % FLASH / 12.59 % RAM, right 20.84 % / 12.48 %, dongle 26.36 % / 20.38 % |
+| `ZMK_KEYBOARD_NAME` fits Zephyr's `BT_DEVICE_NAME_MAX` | `tests/test_matrix.js`; the dongle name was 21 chars, which failed the build with a static assertion |
+| The flake's `zephyrDepsHash` matches the pinned west manifest | a clean `nix build` of each shield; the previous literal was stale and blocked every firmware target |
 
 ## Not verified — do not assume
 

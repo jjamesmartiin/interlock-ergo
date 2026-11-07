@@ -126,4 +126,16 @@ const westYml = fs.readFileSync(path.join(rootDir, 'config/west.yml'), 'utf8');
 assert(westYml.includes('revision: v0.2'), 'west.yml should pin stable revision v0.2 for reproducible builds');
 console.log('✓ Verified west.yml pins stable release v0.2.');
 
+// 9. ZMK_KEYBOARD_NAME becomes the BLE device name, and Zephyr asserts it fits
+//    in BT_DEVICE_NAME_MAX (16 bytes including the NUL). "Interlock Ergo Dongle"
+//    was 21 and failed the dongle build with a static assertion. The shift
+//    register / adc-gain names are not checked here; only the length matters.
+const nameMatches = [...defconfig.matchAll(/config ZMK_KEYBOARD_NAME\s*(?:#[^\n]*\n\s*)*default\s+"([^"]*)"/g)];
+assert(nameMatches.length >= 2, `Expected a ZMK_KEYBOARD_NAME default per shield block, found ${nameMatches.length}`);
+for (const [, name] of nameMatches) {
+    assert(name.length <= 15,
+        `ZMK_KEYBOARD_NAME "${name}" is ${name.length} chars; Zephyr's BT_DEVICE_NAME_MAX is 16 including the NUL, so the shield will not compile`);
+}
+console.log(`✓ Keyboard names fit BT_DEVICE_NAME_MAX (16 incl. NUL): ${nameMatches.map((m) => `"${m[1]}"`).join(', ')}.`);
+
 console.log('✓ ALL FIRMWARE / MATRIX / FAB-GATE CHECKS PASSED SUCCESSFULLY!');

@@ -20,3 +20,7 @@ Thumbs.db
 .vscode/
 .idea/
 node_modules/
+
+# Nix build outputs
+/result
+/result-*

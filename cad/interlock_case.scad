@@ -92,9 +92,20 @@ module half_case(half) {
             translate([cav_x, cav_y, ledge_z])
                 cube([cav_w, plate_y - 2.0 - cav_y, case_d - ledge_z + 1]);
 
-            // USB-C window through the front wall, aligned with the controller.
-            translate([mcu_x, cav_y + 1, pcb_top + 2.0])
-                cube([10.0, wall_thickness + 4, 4.6], center = true);
+            // USB-C window: the through-cut has to reach past the outer face (the
+            // old one started 1.3mm inside it and left a membrane over the port),
+            // then an exterior relief pocket so a standard cable overmold can reach
+            // the controller's receptacle. The relief breaks the rim above the
+            // controller bay, which is open there anyway.
+            translate([mcu_x - usb_window_w / 2, -0.5, pcb_top + 2.0 - usb_window_h / 2])
+                cube([usb_window_w, wall_thickness + 1.5, usb_window_h]);
+            hull() {
+                translate([mcu_x - usb_relief_w / 2, -0.5, pcb_top + 2.0 - usb_relief_h / 2])
+                    cube([usb_relief_w, 0.5, usb_relief_h]);
+                translate([mcu_x - usb_relief_w / 2 + usb_relief_chamfer, usb_relief_d,
+                           pcb_top + 2.0 - usb_relief_h / 2 + usb_relief_chamfer])
+                    cube([usb_relief_w - 2 * usb_relief_chamfer, 0.01, usb_relief_h - 2 * usb_relief_chamfer]);
+            }
 
             // The power switch needs no cutout. An MSK-12D19 is 3.5mm thick with its
             // actuator on the TOP face and ~2.0mm of travel along its 9mm axis, so it

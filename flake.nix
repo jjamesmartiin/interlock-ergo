@@ -70,6 +70,7 @@
               export HOME=$TMPDIR
               node cad/build_models.js
               node tests/test_models.js
+              node tests/test_alignment.js
             '';
             installPhase = ''
               mkdir -p $out
@@ -86,6 +87,9 @@
             buildPhase = ''
               export HOME=$TMPDIR
               node pcb/generate_pcb.js
+              node pcb/generate_schematic.js
+              node tests/test_fab_rules.js
+              node tests/test_alignment.js
             '';
             installPhase = ''
               mkdir -p $out

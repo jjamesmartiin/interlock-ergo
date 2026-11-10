@@ -46,7 +46,9 @@ will have two halves that push each other apart.
 ## 3. PCB
 
 The switch sockets and the diodes go on the **bottom** of the PCB, opposite the
-switch side.
+switch side. Both are in the board's JLCPCB BOM/CPL (`pcb/dist/bom_*.csv`,
+`cpl_*.csv`), so the assembler can place all 76 of each; the three 1 mm fiducials
+the placement needs are on that side too, in `pcb/dist/gerbers_*/`.
 
 1. Diodes first: 1N4148W in SOD-123, cathode (the banded end) toward the row net.
    The diode sits up-and-left of each switch, on the same side as the sockets.
@@ -134,6 +136,9 @@ switches and never needs screws.
 4. If a half stops connecting after a reflash, flash `settings_reset` on that half
    and power-cycle the dongle. That is the recovery path - there is nothing else
    to try, and no key combination to remember.
+5. `&bootloader` on the adjust layer reboots **the half you press it on** (a
+   peripheral boots only itself). Use the dongle's own reset pads, or the reset
+   button on the nice!nano, when you need the dongle in bootloader mode.
 
 ## The one dimension to check before you trust the case
 
@@ -175,3 +180,24 @@ that is exactly why the dry fit comes before the PCB order.
 - **Cell.** `battery_t = 4.5` in `cad/interlock_params.scad`, for a protected
   LP402030 pack (~34 mm long with its PCM board). A 5 mm pouch does not fit under
   the PCB - it needs `standoff_h` raised and a re-print of both halves.
+- **Battery polarity & charging.** `J_BAT` pin 1 is BAT+ and pin 2 is GND, and both
+  are marked `+` / `-` on the front silk next to the connector. LiPo packs are sold
+  with both wire orders, so still check the harness with a multimeter before
+  plugging in - reverse polarity destroys the controller. The switch sits between
+  the cell and the nice!nano's battery/charger node, so the cell
+  **only charges while the power switch is ON**.
+- **USB-C cable clearance.** The window is 10.0 x 4.6 mm with a 13.0 x 7.2 mm
+  exterior relief pocket 2.4 mm deep, so the overmold has somewhere to go; standard
+  11-12.5 mm overmolds seat. The relief opens through the rim above the controller
+  bay (that bay is open anyway) - that is a slot, not a printing defect. A cable
+  whose overmold is thicker than ~6.5 mm may still stop a little short: test with
+  the cable you intend to use.
+- **Encoder knob diameter.** Maximum 16-17 mm. Anything >= 18 mm collides with the
+  adjacent Esc keycap.
+- **Spacebar keycap size.** Left half row 4 uses a 1u switch for Space. Do not buy
+  a 2u or 2.25u keycap - its centre stem collides with Alt. A 1u gap remains
+  between Space and Fn1.
+- **Antenna keep-out.** The nice!nano's antenna is under the open controller bay.
+  Do not put metal, foil or a copper-pour liner within ~5 mm of it, and do not
+  print the case in a metal-filled filament: 2.4 GHz range is the first thing to
+  go, and it goes silently.

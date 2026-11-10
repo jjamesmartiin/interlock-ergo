@@ -65,10 +65,12 @@ module base() {
         translate([wall + (inner_l - board_l) / 2, wall + (inner_w - board_w) / 2, floor_t + standoff - 0.2])
             cube([board_l, board_w, board_t + 0.6]);
         // USB-C window through the -Y short wall, centred on the connector height
-        // (PCB top + ~1.6mm), not on the old whole-module height.
-        translate([outer_l / 2, 0, floor_t + standoff + board_t + 1.4])
+        // (PCB top + ~1.4mm). rotate([90,0,0]) sends +Z to -Y, so the extrusion has
+        // to start at the wall's INNER face - starting at y=0 cut empty space
+        // outside the case and left the port blocked by a 1.4mm wall.
+        translate([outer_l / 2, wall + 0.2, floor_t + standoff + board_t + 1.4])
             rotate([90, 0, 0])
-            linear_extrude(height = wall + 2)
+            linear_extrude(height = wall + 0.6)
             offset(r = 0.5) square([usb_w, usb_h], center = true);
         // Reset pinhole: reach the XIAO's back-side reset pads from underneath.
         translate([reset_x, reset_y, -1]) cylinder(d = reset_d, h = floor_t + 2);
@@ -87,10 +89,12 @@ module lid() {
                         cube([inner_l - 2 * fit - 2.0, inner_w - 2 * fit - 2.0, lip_h + 2]);
                 }
         }
-        // Same USB-C window, so the lid has one correct orientation.
-        translate([outer_l / 2, 0, floor_t + standoff + board_t + 1.4])
+        // Same USB-C window, so the lid has one correct orientation. It has to cut
+        // through the lip as well (the lip is a 1mm wall at y = wall + fit, right in
+        // front of the connector), so this extrusion starts outside it.
+        translate([outer_l / 2, wall + fit + 1.1, floor_t + standoff + board_t + 1.4])
             rotate([90, 0, 0])
-            linear_extrude(height = wall + 2)
+            linear_extrude(height = wall + fit + 1.7)
             offset(r = 0.5) square([usb_w, usb_h], center = true);
     }
 }

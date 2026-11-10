@@ -1,6 +1,6 @@
 ** Drc report for interlock_ergo_right_choc.kicad_pcb **
 ** Created on 1970-01-01T00:00:00 **
-** Report includes: Errors **
+** Report includes: Errors, Warnings **
 
 ** Found 0 DRC violations **
 
@@ -14,5 +14,6 @@
     - Tuning profile track geometries
     - Footprint doesn't match symbol's footprint filters
     - Footprint component type doesn't match footprint pads
+    - Footprint not found in libraries
 
 ** End of Report **

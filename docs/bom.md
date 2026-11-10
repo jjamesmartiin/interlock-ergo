@@ -29,6 +29,7 @@ This directory provides verified sourcing links, Manufacturer Part Numbers (MPN)
 | **Choc Switches** | Kailh Choc v1 Switches (Red Linear 50gf or Pro Red 35gf) | 80 | PG1350 | [Boardsource](https://boardsource.xyz/store/5e6bca927c9c053a479ff4b5) | [Chosfox](https://chosfox.com/products/kailh-choc-v1-switches) / [MKUltra](https://mkultra.click/kailh-choc-switches/) | $48.00 |
 | **Choc Keycaps** | MBK Choc PBT Keycap Set + Convex Thumbs | 1 set | MBK Choc | [Typeractive MBK Legend](https://typeractive.xyz/products/mbk-legend-keycaps) | [Boardsource MBK](https://boardsource.xyz/store/5f6cd6a73d9e035048d06748) | $35.00 – $50.00 |
 | **PCB Fab** | JLCPCB 2-Layer FR4 - order **left 3 pcs, right 2 pcs** (see 6. below) | 1 pair | Custom | [JLCPCB](https://jlcpcb.com/) | Upload `pcb/dist/*_choc_gerbers.zip` | $18.00 |
+| **SMT assembly (optional)** | `pcb/dist/cpl_*_choc.csv` + `bom_*_choc.csv` cover the diodes and all hotswap sockets, bottom side; three 1 mm fiducials are on the board for placement. The controller, switch, encoder and battery jack are through-hole and stay hand-soldered. **Check the socket rotation in JLCPCB's placement preview before paying** - the pads are asymmetric, and a rotated socket is a rework job | 1 | - | [JLCPCB](https://jlcpcb.com/) | - | quote |
 | **Switch Plate** | 3D Printed PETG (1.2mm) or JLCPCB FR4 Plate | 1 pair | Custom | 3D Print (`cad/dist/interlock_plate_choc_*.stl`) | JLCPCB FR4 1.2mm | $3.00 – $6.00 |
 
 ---
@@ -41,6 +42,7 @@ This directory provides verified sourcing links, Manufacturer Part Numbers (MPN)
 | **MX Switches** | Gateron Milky Yellow / Kailh Box / Cherry MX | 80 | MX Style | [NovelKeys](https://novelkeys.com/products/gateron-milky-yellow-switches) | [Divinikey](https://divinikey.com/products/gateron-milky-yellow-pro-linear-switches) | $24.00 – $40.00 |
 | **MX Keycaps** | 65% PBT Cherry/OEM Keycap Set with Split Space | 1 set | MX Stem | [Amazon PBT 65% Split](https://www.amazon.com/dp/B09V7CQ22Q) | [Drop Skylight](https://drop.com/buy/drop-skylight-series-keycap-set) | $25.00 – $45.00 |
 | **PCB Fab** | JLCPCB 2-Layer FR4 - order **2 pcs of each half** (see 6. below) | 1 pair | Custom | [JLCPCB](https://jlcpcb.com/) | Upload `pcb/dist/*_mx_gerbers.zip` | $18.00 |
+| **SMT assembly (optional)** | `pcb/dist/cpl_*_mx.csv` + `bom_*_mx.csv` cover the diodes and all hotswap sockets, bottom side; three 1 mm fiducials are on the board for placement. The controller, switch, encoder and battery jack are through-hole and stay hand-soldered. **Check the socket rotation in JLCPCB's placement preview before paying** - the pads are asymmetric, and a rotated socket is a rework job | 1 | - | [JLCPCB](https://jlcpcb.com/) | - | quote |
 | **Switch Plate** | 3D Printed PETG (1.5mm) or JLCPCB FR4 Plate | 1 pair | Custom | 3D Print (`cad/dist/interlock_plate_mx_*.stl`) | JLCPCB FR4 1.5mm | $3.00 – $6.00 |
 
 ---

@@ -18,7 +18,7 @@ Two complete hardware variants are published, each with its own PCB and plate:
 | Pitch | 18.0 × 17.0 mm | 19.05 × 19.05 mm |
 | Plate | 1.2 mm | 1.5 mm |
 | Case height | 14.2 mm | 16.0 mm |
-| Case, docked | 350.2 × 137.6 mm | 367.5 × 147.8 mm |
+| Case, docked | 386.2 × 137.6 mm | 405.6 × 147.8 mm |
 
 ![Interlock Ergo, both halves docked](docs/images/hero.png)
 
@@ -51,7 +51,7 @@ consequences of the straight seam that are worth knowing before you build:
 
 - The row stagger needs 22.5 mm of horizontal shear. With a straight seam that
   shear ends up as dead case width on each half's seam edge, so the **centre gap
-  between `5` and `6` is 67.1 mm (3.7 u)**, not the ~1.5 u of a normal staggered
+  between `5` and `6` is 69.1 mm (3.8 u)**, not the ~1.5 u of a normal staggered
   board. It is the same on every row. That is the price of a straight seam plane;
   a stepped seam would close it and is on the roadmap.
 - `6`, `Y`, `H` and `N` all land on the right half (red column in the diagram),
@@ -64,7 +64,7 @@ consequences of the straight seam that are worth knowing before you build:
 | | |
 |---|---|
 | ![Left case](docs/images/case-left.png) | ![Right case](docs/images/case-right.png) |
-| Left half: seam face with the two dovetail tabs, USB-C window and the recessed power switch slot in the outer wall | Right half: blind dovetail sockets and flush magnet pockets in the seam wall |
+| Left half: seam face with the two dovetail tabs, USB-C window with its overmold relief, and the open controller bay | Right half: blind dovetail sockets and flush magnet pockets in the seam wall |
 | ![Underside](docs/images/case-underside.png) | ![Plates](docs/images/plates.png) |
 | Underside: four M2 bosses with the PCB mounts, cell recess in the controller bay | Plates: 14.0 mm switch apertures, encoder through-hole on the left |
 | ![Dongle](docs/images/dongle.png) | |
@@ -124,8 +124,9 @@ macros - there is no macro engine in the default keymap.
 │   ├── generate_layout.js            # draws docs/images/layout.svg from the real numbers
 │   └── production-readiness-audit.md # adversarial review of the current tree
 ├── pcb/generate_pcb.js               # KiCad board generator + router + DRC gate
+├── pcb/generate_schematic.js         # .kicad_sch from the verified board, with ERC
 ├── pcb/*.kicad_pcb                   # four boards: {left,right} x {choc,mx}
-├── pcb/dist/                         # gerbers/BOM/CPL, only for DRC-clean boards
+├── pcb/dist/                         # gerbers/BOM/CPL/schematic, only for DRC-clean boards
 └── tests/
     ├── test_matrix.js                # firmware matrix, Kconfig, stagger agreement
     ├── test_models.js                # mesh watertightness + dimension gate
@@ -146,10 +147,12 @@ node cad/build_models.js      # rebuild all STLs
 node cad/render_preview.js    # rebuild the README renders
 node docs/generate_layout.js  # rebuild the layout diagram
 node pcb/generate_pcb.js      # regenerate boards; DRC-clean boards emit fab files
+node pcb/generate_schematic.js # regenerate the .kicad_sch files and their ERC/netlist gate
 ```
 
 `pcb/generate_pcb.js` refuses to emit gerbers, BOM or CPL for any board that has
-DRC violations or unconnected pads, and withdraws previously published ones.
+DRC violations or unconnected pads - **at any severity**, warnings included - and
+withdraws previously published ones.
 **If a gerber zip is missing from `pcb/dist/`, that board is not orderable** - fix
 the routing, do not hand-build a zip from `pcb/*.kicad_pcb`.
 
@@ -192,6 +195,8 @@ taller `standoff_h` in `cad/interlock_params.scad` and a re-print of both halves
 ### PCBs
 
 1. `node pcb/generate_pcb.js`. Only DRC-clean boards are written to `pcb/dist/`.
+   `node pcb/generate_schematic.js` then emits the matching `.kicad_sch` and fails if
+   its netlist disagrees with the board.
 2. Order from JLCPCB: 2 layers, 1.6 mm, 1 oz copper, ENIG recommended for the
    hotswap pads, at the quantity in item 3 (5 pcs crosses the 650 cm² order-area
    threshold and adds a large-order surcharge).
@@ -272,7 +277,7 @@ soldered or typed on. Before ordering PCBs, print one half and dry-fit it - see
 step 1 of [docs/assembly.md](docs/assembly.md).
 
 Known limitations, in full: [docs/production-readiness-audit.md](docs/production-readiness-audit.md)
-(67 mm docked centre gap, 200 mAh cell ceiling, no schematic).
+(69 mm docked centre gap, 200 mAh cell ceiling, no ESD/TVS protection).
 
 Every mechanical dimension the CAD rests on, and where it came from:
 [docs/part-dimensions.md](docs/part-dimensions.md).

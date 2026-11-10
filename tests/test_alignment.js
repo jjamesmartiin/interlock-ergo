@@ -313,12 +313,49 @@ for (const [variant, v] of Object.entries(variants)) {
         assert(!insideMesh(kase, px + plateW / 2, py + plateL / 2, ledgeZ - 0.2),
             `interlock_${variant}_${side}.stl: the cavity is not open below the plate ledge`);
 
+        // USB-C: the window has to be open through the front wall, with the exterior
+        // relief pocket for the cable overmold. Both have shipped broken here: the
+        // window stopped 1.3mm short of the outer face (a membrane over the port) and
+        // the dongle's was extruded outside the case. A dimension check sees neither.
+        const pw = cols * v.pitchX + 2 * MARGIN_X + c.stagger_max_u * v.pitchX;
+        const mcuX = cavX + pw / 2;
+        const zWin = c.floor_thickness + c.standoff_h + c.pcb_thickness + 2.0;
+        assert(!insideMesh(kase, mcuX, 1.0, zWin),
+            `interlock_${variant}_${side}.stl: the USB-C window is blocked - a plug cannot reach the controller`);
+        assert(!insideMesh(kase, mcuX + c.usb_relief_w / 2 - 1.0, 0.3, zWin),
+            `interlock_${variant}_${side}.stl: no exterior relief pocket beside the USB-C window`);
+        assert(insideMesh(kase, mcuX, 1.0, zWin - c.usb_relief_h / 2 - 0.6),
+            `interlock_${variant}_${side}.stl: the USB-C relief is a slot, not a pocket`);
+        assert(insideMesh(kase, mcuX + 40, 1.0, zWin),
+            `interlock_${variant}_${side}.stl: the front wall is missing beside the USB-C window`);
+
         meshChecked++;
         console.log(`  ok ${`${variant} ${side} plate + case`.padEnd(38)} apertures, webs and rebate sampled in the meshes`);
     }
 }
 
 if (meshChecked) console.log(`✓ ${meshChecked} plate/case pairs: every aperture, web and rebate is where the plan says.`);
+
+// The dongle's USB-C window: open through the 1.4mm wall, and open through the
+// lid's lip, which sits directly in front of the connector.
+{
+    const src = fs.readFileSync(path.join(rootDir, 'cad', 'dongle_case.scad'), 'utf8');
+    const d = {};
+    for (const m of src.matchAll(/^([a-z_][a-z0-9_]*)\s*=\s*(-?[\d.]+)\s*;/gm)) d[m[1]] = parseFloat(m[2]);
+    const base = path.join(rootDir, 'cad', 'dist', 'dongle_case_base.stl');
+    const lid = path.join(rootDir, 'cad', 'dist', 'dongle_case_lid.stl');
+    if (fs.existsSync(base) && fs.existsSync(lid)) {
+        const xUsb = (d.board_l + 1.2 + 2 * d.wall) / 2;
+        const zUsb = d.floor_t + d.standoff + d.board_t + 1.4;
+        assert(!insideMesh(loadTriangles(base), xUsb, d.wall / 2, zUsb),
+            'dongle base: the USB-C window is blocked by the wall - a plug cannot reach the XIAO');
+        assert(!insideMesh(loadTriangles(lid), xUsb, d.wall + d.fit + 0.5, zUsb),
+            'dongle lid: the lip blocks the USB-C window');
+        assert(insideMesh(loadTriangles(base), xUsb + 10, d.wall / 2, zUsb),
+            'dongle base: the short wall is missing beside the USB-C window');
+        console.log('  ok dongle base + lid'.padEnd(42) + 'USB-C window open through wall and lip');
+    }
+}
 
 // ------------------------------------------------------- hotswap footprint
 //

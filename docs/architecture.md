@@ -10,7 +10,7 @@ The ANSI feel comes from the row stagger, not from wide modifiers. Each whole ro
 shifted by 0 / 0.5 / 0.75 / 1.25 / 0.25 u so that every letter column lands on its
 GH60 x position, so touch typists keep their muscle memory. The price is that the
 stagger needs 22.5 mm of horizontal shear, which a straight seam converts into dead
-case width at each half's seam edge — see the README's note on the 67 mm centre gap.
+case width at each half's seam edge — see the README's note on the 69 mm centre gap.
 
 `6`, `Y`, `H` and `N` are on the right half. That matches the convention of every
 6-column split (Lily58, Sofle, Iris, Kyria) and of ANSI, so it is a correctness
@@ -75,15 +75,22 @@ re-checked by `tests/test_models.js`.
 
 ## 5. Power
 
-Cell → JST-PH on the PCB → slide switch → nice!nano `RAW` (its `B+`). Ground returns
-directly. The cell must be a protected pouch: the nice!nano's charger handles
-charging only and provides no over-discharge or over-current protection. Charge
-current is fixed at 100 mA, so a ~200 mAh pack sits at C/2 and the boost jumper
-must stay open.
+Cell → JST-PH on the PCB → slide switch → nice!nano `RAW` (its battery/charger
+node, also the `B+` pad). Ground returns directly. The switch is therefore inside
+the charge path as well as the discharge path: **the cell charges only while the
+switch is ON**. `J_BAT` pin 1 is BAT+ and both pins are marked on the front silk.
+The cell must be a protected pouch: the nice!nano's charger handles charging only
+and provides no over-discharge or over-current protection. Charge current is fixed
+at 100 mA, so a ~200 mAh pack sits at C/2 and the boost jumper must stay open.
 
 The nice!nano measures its own cell through VDDH (`zmk,battery-nrf-vddh`), so no
 divider and no ADC pin are involved. The dongle proxies each peripheral's level to
 the host.
+
+**RF keep-out.** The nice!nano's antenna is the end away from its USB socket, which
+sits under the open controller bay. Nothing metal may come within ~5 mm of it: no
+metal plate, no foil lining, no copper pour. 2.4 GHz range is the first thing that
+suffers, and it does so silently.
 
 ## 6. Mechanical stackup
 

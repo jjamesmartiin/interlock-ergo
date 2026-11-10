@@ -262,6 +262,7 @@ const R_VIA_DRILL = 0.3;     // via drill (mm)
 const R_PAD_MARGIN = 0.65;   // centreline clearance from pad copper (covers track + via)
 const R_HOLE_MARGIN = 0.8;   // centreline clearance outside an NPTH hole radius
 const R_EDGE_MARGIN = 0.9;   // centreline clearance inside the board edge
+const R_VIA_HOLE_GAP = 0.4;    // edge-to-edge gap between a via drill and a pad drill
 const R_FREE = 0;
 const R_BLOCK = -1;
 
@@ -380,6 +381,25 @@ function routeBoard(cfg) {
     }
     for (const h of holes) blockCircle(h.x, h.y, h.r + R_HOLE_MARGIN);
 
+    /* --- through-hole pad drills ---------------------------------------
+     * A via must not be drilled into a pad's hole, even on the same net: the
+     * router would happily place one, because a net may reuse its own cells.
+     * Kept out of `occ` so the pad centre itself stays routable. */
+    const viaBlock = new Uint8Array(NC);
+    for (const p of pads) {
+        if (!p.drill) continue;
+        const r = p.drill + R_VIA_DRILL / 2 + R_VIA_HOLE_GAP;
+        const x0 = Math.max(0, Math.floor((p.x - r) / CELL));
+        const x1 = Math.min(nx - 1, Math.ceil((p.x + r) / CELL));
+        const y0 = Math.max(0, Math.floor((p.y - r) / CELL));
+        const y1 = Math.min(ny - 1, Math.ceil((p.y + r) / CELL));
+        for (let y = y0; y <= y1; y++) {
+            for (let x = x0; x <= x1; x++) {
+                if (Math.hypot(x * CELL - p.x, y * CELL - p.y) <= r) viaBlock[y * nx + x] = 1;
+            }
+        }
+    }
+
     /* --- pads ---------------------------------------------------------- */
     function paintPad(p, margin, isCopper) {
         const x0 = Math.max(0, Math.floor((p.x - p.hw - margin) / CELL));
@@ -465,6 +485,7 @@ function routeBoard(cfg) {
     // guarantees that (the nearest an alien 4-connected track can then get to
     // the via centre is one full cell = 0.8 mm).
     function viaOk(x, y) {
+        if (viaBlock[y * nx + x]) return false;
         for (let dy = -1; dy <= 1; dy++) {
             for (let dx = -1; dx <= 1; dx++) {
                 const xx = x + dx, yy = y + dy;
@@ -791,12 +812,27 @@ function generateKiCadPCB(opts) {
         hole(h[0], h[1], 1.1);
     }
 
-    // Silkscreen metadata
-    pcbContent += `  (gr_text "Interlock Ergo (${side.toUpperCase()} - ${variant.toUpperCase()})" (at ${(boardW * 0.5).toFixed(2)} 4.0) (layer "F.SilkS") (effects (font (size 1.5 1.5) (thickness 0.25))))\n`;
-    pcbContent += `  (gr_text "ZMK 2.4GHz Wireless Split" (at ${(boardW * 0.5).toFixed(2)} 7.0) (layer "F.SilkS") (effects (font (size 1.2 1.2) (thickness 0.2))))\n`;
+    // Silkscreen metadata. The top of the board belongs to U1 and its pads, so the
+    // title goes in the 8mm silk-free strip under the key field.
+    const silkY = boardH - 7.2;
+    pcbContent += `  (gr_text "Interlock Ergo (${side.toUpperCase()} - ${variant.toUpperCase()})" (at ${(boardW * 0.5).toFixed(2)} ${silkY.toFixed(2)}) (layer "F.SilkS") (effects (font (size 1.5 1.5) (thickness 0.25))))\n`;
+    pcbContent += `  (gr_text "ZMK 2.4GHz Wireless Split" (at ${(boardW * 0.5).toFixed(2)} ${(silkY + 2.6).toFixed(2)}) (layer "F.SilkS") (effects (font (size 1.2 1.2) (thickness 0.2))))\n`;
     if (side === 'right') {
-        pcbContent += `  (gr_text "6-Y-H-N ON RIGHT HALF" (at ${(boardW * 0.5).toFixed(2)} 10.0) (layer "F.SilkS") (effects (font (size 1.3 1.3) (thickness 0.25))))\n`;
+        pcbContent += `  (gr_text "6-Y-H-N ON RIGHT HALF" (at ${(boardW * 0.5).toFixed(2)} ${(silkY + 4.9).toFixed(2)}) (layer "F.SilkS") (effects (font (size 1.3 1.3) (thickness 0.25))))\n`;
     }
+
+    // Three 1mm fiducials on the assembly side (all SMT is on the bottom), placed
+    // asymmetric so a mis-picked board origin shows up. JLCPCB assembly wants them.
+    // Net 0, so the router blocks their copper and keeps tracks clear.
+    [[12.0, boardH - 4.5], [boardW - 12.0, boardH - 4.5], [24.0, 5.0]].forEach((p, i) => {
+        pcbContent += `  (footprint "Fiducial:Fiducial_1mm_Mask2mm" (layer "B.Cu")
+    (at ${p[0].toFixed(2)} ${p[1].toFixed(2)})
+    (attr exclude_from_pos_files)
+    (fp_text reference "FID${i + 1}" (at 0 -2.2) (layer "B.SilkS") (effects (font (size 1 1) (thickness 0.15)) (justify mirror)))
+    (pad "" smd circle (at 0 0) (size 1 1) (layers "B.Cu" "B.Mask") (solder_mask_margin 0.5))
+  )\n`;
+        rec({ ref: `FID${i + 1}`, num: '', x: p[0], y: p[1], net: 0, kind: 'circle', hw: 0.5, hh: 0.5, layers: [1] });
+    });
 
     // Dimensions for MCU, Power Switch, and Battery in Top Controller Bay
     const mcuX = (boardW * 0.5).toFixed(2);
@@ -843,7 +879,19 @@ function generateKiCadPCB(opts) {
         return net;
     });
     const cplRows = [];
+    const socket = isChoc
+        ? { comment: 'Kailh Choc Hotswap Socket CPG135001S30', lcsc: 'C5333465' }
+        : { comment: 'Kailh MX Hotswap Socket CPG151101S11', lcsc: 'C2800547' };
     let switchIndex = 1;
+
+    // SOD-123 diode: pad 1 = cathode to ROWr, pad 2 = anode to the key's private net.
+    // The reference sits 2.4mm off the pads - at 1.2 it clipped their mask openings.
+    const diodeFootprint = (dRef, dx, dy, rowNet, diodeNet) => `  (footprint "Diode_SMD:D_SOD-123" (layer "B.Cu")
+    (at ${dx} ${dy})
+    (fp_text reference "${dRef}" (at 0 2.4) (layer "B.SilkS") (effects (font (size 1 1) (thickness 0.15)) (justify mirror)))
+    (pad "1" smd rect (at -1.65 0) (size 0.9 1.2) (layers "B.Cu" "B.Paste" "B.Mask") (net ${rowNet.id} "${rowNet.name}"))
+    (pad "2" smd rect (at 1.65 0) (size 0.9 1.2) (layers "B.Cu" "B.Paste" "B.Mask") (net ${diodeNet.id} "${diodeNet.name}"))
+  )\n`;
 
     for (const k of activeKeys) {
         const { r, c, diodeNet } = k;
@@ -906,7 +954,7 @@ function generateKiCadPCB(opts) {
             const f = (n) => n.toFixed(3);
             pcbContent += `  (footprint "${pads.name}" (layer "B.Cu")
     (at ${x} ${y})
-    (fp_text reference "${swRef}" (at 0 ${pads.refY}) (layer "B.SilkS"))
+    (fp_text reference "${swRef}" (at 0 ${pads.refY}) (layer "B.SilkS") (effects (font (size 1 1) (thickness 0.15)) (justify mirror)))
     (pad "" np_thru_hole circle (at 0 0) (size ${f(pads.centre)} ${f(pads.centre)}) (drill ${f(pads.centre)}) (layers *.Cu *.Mask))
     (pad "" np_thru_hole circle (at ${-pads.pegX} 0) (size ${f(pads.peg)} ${f(pads.peg)}) (drill ${f(pads.peg)}) (layers *.Cu *.Mask))
     (pad "" np_thru_hole circle (at ${pads.pegX} 0) (size ${f(pads.peg)} ${f(pads.peg)}) (drill ${f(pads.peg)}) (layers *.Cu *.Mask))
@@ -916,6 +964,10 @@ function generateKiCadPCB(opts) {
     (pad "2" smd roundrect (at ${f(pads.padB.x)} ${f(pads.padB.y)}) (size ${pads.padB.w} ${pads.padB.h}) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.1) (net ${diodeNet.id} "${diodeNet.name}"))
   )\n`;
 
+            cplRows.push({
+                designator: swRef, midX: x, midY: y, layer: 'bottom', rotation: 0,
+                comment: socket.comment, footprint: pads.name, lcsc: socket.lcsc
+            });
             rec({ ref: swRef, num: '1', x: pad1X, y: pad1Y, net: colNet.id, kind: 'rect', hw: pads.padA.w / 2, hh: pads.padA.h / 2, layers: [1] });
             rec({ ref: swRef, num: '2', x: pad2X, y: pad2Y, net: diodeNet.id, kind: 'rect', hw: pads.padB.w / 2, hh: pads.padB.h / 2, layers: [1] });
             hole(sw.x, sw.y, pads.centre / 2);
@@ -924,22 +976,13 @@ function generateKiCadPCB(opts) {
             hole(sw.x + pads.pinA.x, sw.y + pads.pinA.y, pads.pinHole / 2);
             hole(sw.x + pads.pinB.x, sw.y + pads.pinB.y, pads.pinHole / 2);
 
-            // SOD-123 Diode (Pad 1: Cathode -> ROWr; Pad 2: Anode -> SW_D_r_c)
             const dx = (parseFloat(x) - 4.5).toFixed(2);
             const dy = (parseFloat(y) + 4.0).toFixed(2);
-            pcbContent += `  (footprint "Diode_SMD:D_SOD-123" (layer "B.Cu")
-    (at ${dx} ${dy})
-    (fp_text reference "${dRef}" (at 0 1.2) (layer "B.SilkS"))
-    (pad "1" smd rect (at -1.65 0) (size 0.9 1.2) (layers "B.Cu" "B.Paste" "B.Mask") (net ${rowNet.id} "${rowNet.name}"))
-    (pad "2" smd rect (at 1.65 0) (size 0.9 1.2) (layers "B.Cu" "B.Paste" "B.Mask") (net ${diodeNet.id} "${diodeNet.name}"))
-  )\n`;
+            pcbContent += diodeFootprint(dRef, dx, dy, rowNet, diodeNet);
 
             cplRows.push({
-                designator: dRef,
-                midX: dx,
-                midY: dy,
-                layer: 'bottom',
-                rotation: 0
+                designator: dRef, midX: dx, midY: dy, layer: 'bottom', rotation: 0,
+                comment: '1N4148W', footprint: 'SOD-123', lcsc: 'C81598'
             });
 
             // Connect Switch Pad 2 to Diode Pad 2 (Anode) on B.Cu
@@ -950,14 +993,12 @@ function generateKiCadPCB(opts) {
             // otherwise it shorts COL0 straight to ROW0 and ghosts column 0.
             const dx = (parseFloat(x) - 4.5).toFixed(2);
             const dy = (parseFloat(y) + 4.0).toFixed(2);
-            pcbContent += `  (footprint "Diode_SMD:D_SOD-123" (layer "B.Cu")
-    (at ${dx} ${dy})
-    (fp_text reference "${dRef}" (at 0 1.2) (layer "B.SilkS"))
-    (pad "1" smd rect (at -1.65 0) (size 0.9 1.2) (layers "B.Cu" "B.Paste" "B.Mask") (net ${rowNet.id} "${rowNet.name}"))
-    (pad "2" smd rect (at 1.65 0) (size 0.9 1.2) (layers "B.Cu" "B.Paste" "B.Mask") (net ${diodeNet.id} "${diodeNet.name}"))
-  )\n`;
+            pcbContent += diodeFootprint(dRef, dx, dy, rowNet, diodeNet);
 
-            cplRows.push({ designator: dRef, midX: dx, midY: dy, layer: 'bottom', rotation: 0 });
+            cplRows.push({
+                designator: dRef, midX: dx, midY: dy, layer: 'bottom', rotation: 0,
+                comment: '1N4148W', footprint: 'SOD-123', lcsc: 'C81598'
+            });
 
             // Encoder pad S2 (-2.5,-7.0 relative) -> diode anode
             rec({ ref: dRef, num: '1', x: parseFloat(dx) - 1.65, y: parseFloat(dy), net: rowNet.id, kind: 'rect', hw: 0.45, hh: 0.6, layers: [1] });
@@ -972,10 +1013,10 @@ function generateKiCadPCB(opts) {
     pcbContent += `  (footprint "NiceNano_v2_ProMicro" (layer "F.Cu")
     (at ${mcuX} ${mcuY})
     (fp_text reference "U1" (at 0 -10) (layer "F.SilkS"))
-    (fp_line (start -9 -14) (end 9 -14) (layer "F.SilkS") (width 0.15))
-    (fp_line (start 9 -14) (end 9 14) (layer "F.SilkS") (width 0.15))
-    (fp_line (start 9 14) (end -9 14) (layer "F.SilkS") (width 0.15))
-    (fp_line (start -9 14) (end -9 -14) (layer "F.SilkS") (width 0.15))
+    (fp_line (start -10 -15.25) (end 10 -15.25) (layer "F.SilkS") (width 0.15))
+    (fp_line (start 10 -15.25) (end 10 15.25) (layer "F.SilkS") (width 0.15))
+    (fp_line (start 10 15.25) (end -10 15.25) (layer "F.SilkS") (width 0.15))
+    (fp_line (start -10 15.25) (end -10 -15.25) (layer "F.SilkS") (width 0.15))
 `;
 
     // Emit all 24 pads from the same table the routing used, so the two cannot disagree.
@@ -985,8 +1026,8 @@ function generateKiCadPCB(opts) {
         const rNet = mcuPadNets[p + 12];
         pcbContent += `    (pad "${p + 1}" thru_hole circle (at -7.62 ${py}) (size 1.7 1.7) (drill 1.0) (layers *.Cu *.Mask) (net ${lNet.id} "${lNet.name}"))\n`;
         pcbContent += `    (pad "${p + 13}" thru_hole circle (at 7.62 ${py}) (size 1.7 1.7) (drill 1.0) (layers *.Cu *.Mask) (net ${rNet.id} "${rNet.name}"))\n`;
-        rec({ ref: 'U1', num: String(p + 1), x: parseFloat(mcuX) - 7.62, y: mcuY - 13.97 + p * 2.54, net: lNet.id, kind: 'circle', hw: 0.85, hh: 0.85, layers: [0, 1] });
-        rec({ ref: 'U1', num: String(p + 13), x: parseFloat(mcuX) + 7.62, y: mcuY - 13.97 + p * 2.54, net: rNet.id, kind: 'circle', hw: 0.85, hh: 0.85, layers: [0, 1] });
+        rec({ ref: 'U1', num: String(p + 1), x: parseFloat(mcuX) - 7.62, y: mcuY - 13.97 + p * 2.54, net: lNet.id, kind: 'circle', hw: 0.85, hh: 0.85, layers: [0, 1], drill: 0.5 });
+        rec({ ref: 'U1', num: String(p + 13), x: parseFloat(mcuX) + 7.62, y: mcuY - 13.97 + p * 2.54, net: rNet.id, kind: 'circle', hw: 0.85, hh: 0.85, layers: [0, 1], drill: 0.5 });
     }
     pcbContent += `  )\n`;
 
@@ -1002,7 +1043,7 @@ function generateKiCadPCB(opts) {
         const encKeyNet = activeKeys.find(k => k.r === 0 && k.c === 0).diodeNet;
         pcbContent += `  (footprint "RotaryEncoder_Alps_EC11" (layer "F.Cu")
     (at ${encX} ${encY})
-    (fp_text reference "ENC1" (at 0 -8) (layer "F.SilkS"))
+    (fp_text reference "ENC1" (at 0 -10.5) (layer "F.SilkS"))
     (pad "A" thru_hole circle (at -2.5 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${netEncA.id} "${netEncA.name}"))
     (pad "C" thru_hole circle (at 0 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net 1 "GND"))
     (pad "B" thru_hole circle (at 2.5 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${netEncB.id} "${netEncB.name}"))
@@ -1012,11 +1053,11 @@ function generateKiCadPCB(opts) {
     (pad "S2" thru_hole circle (at 2.5 -7.0) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${encKeyNet.id} "${encKeyNet.name}"))
   )\n`;
         const efx = parseFloat(encX), efy = parseFloat(encY);
-        rec({ ref: 'ENC1', num: 'A', x: efx - 2.5, y: efy + 7.5, net: netEncA.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
-        rec({ ref: 'ENC1', num: 'C', x: efx, y: efy + 7.5, net: 1, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
-        rec({ ref: 'ENC1', num: 'B', x: efx + 2.5, y: efy + 7.5, net: netEncB.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
-        rec({ ref: 'ENC1', num: 'S1', x: efx - 2.5, y: efy - 7.0, net: col0Net.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
-        rec({ ref: 'ENC1', num: 'S2', x: efx + 2.5, y: efy - 7.0, net: encKeyNet.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1] });
+        rec({ ref: 'ENC1', num: 'A', x: efx - 2.5, y: efy + 7.5, net: netEncA.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
+        rec({ ref: 'ENC1', num: 'C', x: efx, y: efy + 7.5, net: 1, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
+        rec({ ref: 'ENC1', num: 'B', x: efx + 2.5, y: efy + 7.5, net: netEncB.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
+        rec({ ref: 'ENC1', num: 'S1', x: efx - 2.5, y: efy - 7.0, net: col0Net.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
+        rec({ ref: 'ENC1', num: 'S2', x: efx + 2.5, y: efy - 7.0, net: encKeyNet.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
         // Mounting posts: blocked on both layers, radius taken from the slot's long axis.
         hole(efx - 5.6, efy, 1.4);
         hole(efx + 5.6, efy, 1.4);
@@ -1025,14 +1066,14 @@ function generateKiCadPCB(opts) {
     // Power Switch (MSK-12D19) in the top bay, on the outer edge of the board
     pcbContent += `  (footprint "SlideSwitch_MSK12D19" (layer "F.Cu")
     (at ${swX} ${swY})
-    (fp_text reference "SW_PWR" (at 0 -4) (layer "F.SilkS"))
+    (fp_text reference "SW_PWR" (at ${side === 'left' ? 7 : -7} 0) (layer "F.SilkS"))
     (pad "1" thru_hole circle (at 0 -2.0) (size 1.6 1.6) (drill 0.9) (layers *.Cu *.Mask) (net 9 "BAT_PLUS"))
     (pad "2" thru_hole circle (at 0 0) (size 1.6 1.6) (drill 0.9) (layers *.Cu *.Mask) (net 3 "RAW"))
     (pad "3" thru_hole circle (at 0 2.0) (size 1.6 1.6) (drill 0.9) (layers *.Cu *.Mask))
   )\n`;
-    rec({ ref: 'SW_PWR', num: '1', x: parseFloat(swX), y: swY - 2.0, net: 9, kind: 'circle', hw: 0.8, hh: 0.8, layers: [0, 1] });
-    rec({ ref: 'SW_PWR', num: '2', x: parseFloat(swX), y: swY, net: 3, kind: 'circle', hw: 0.8, hh: 0.8, layers: [0, 1] });
-    rec({ ref: 'SW_PWR', num: '3', x: parseFloat(swX), y: swY + 2.0, net: 0, kind: 'circle', hw: 0.8, hh: 0.8, layers: [0, 1] });
+    rec({ ref: 'SW_PWR', num: '1', x: parseFloat(swX), y: swY - 2.0, net: 9, kind: 'circle', hw: 0.8, hh: 0.8, layers: [0, 1], drill: 0.45 });
+    rec({ ref: 'SW_PWR', num: '2', x: parseFloat(swX), y: swY, net: 3, kind: 'circle', hw: 0.8, hh: 0.8, layers: [0, 1], drill: 0.45 });
+    rec({ ref: 'SW_PWR', num: '3', x: parseFloat(swX), y: swY + 2.0, net: 0, kind: 'circle', hw: 0.8, hh: 0.8, layers: [0, 1], drill: 0.45 });
 
     // Battery Connector (JST-PH 2-Pin) in top bay
     pcbContent += `  (footprint "Connector_JST:JST_PH_S2B-PH-K_1x02" (layer "F.Cu")
@@ -1041,8 +1082,14 @@ function generateKiCadPCB(opts) {
     (pad "1" thru_hole roundrect (at -1.0 0) (size 1.5 2.0) (drill 0.8) (layers *.Cu *.Mask) (net 9 "BAT_PLUS"))
     (pad "2" thru_hole oval (at 1.0 0) (size 1.5 2.0) (drill 0.8) (layers *.Cu *.Mask) (net 1 "GND"))
   )\n`;
-    rec({ ref: 'J_BAT', num: '1', x: parseFloat(batX) - 1.0, y: parseFloat(batY), net: 9, kind: 'rect', hw: 0.75, hh: 1.0, layers: [0, 1] });
-    rec({ ref: 'J_BAT', num: '2', x: parseFloat(batX) + 1.0, y: parseFloat(batY), net: 1, kind: 'stadium', hw: 0.75, hh: 1.0, layers: [0, 1] });
+    rec({ ref: 'J_BAT', num: '1', x: parseFloat(batX) - 1.0, y: parseFloat(batY), net: 9, kind: 'rect', hw: 0.75, hh: 1.0, layers: [0, 1], drill: 0.4 });
+    rec({ ref: 'J_BAT', num: '2', x: parseFloat(batX) + 1.0, y: parseFloat(batY), net: 1, kind: 'stadium', hw: 0.75, hh: 1.0, layers: [0, 1], drill: 0.4 });
+
+    // JST-PH LiPo packs ship with both wire orders (Adafruit is pin 1 +, many
+    // generic packs are reversed), so mark pin 1 on the silk - a reversed pack
+    // destroys the controller's charger.
+    pcbContent += `  (gr_text "+" (at ${(parseFloat(batX) - 1.0).toFixed(2)} ${(batY + 2.6).toFixed(2)}) (layer "F.SilkS") (effects (font (size 1.4 1.4) (thickness 0.28))))\n`;
+    pcbContent += `  (gr_text "-" (at ${(parseFloat(batX) + 1.0).toFixed(2)} ${(batY + 2.6).toFixed(2)}) (layer "F.SilkS") (effects (font (size 1.4 1.4) (thickness 0.28))))\n`;
 
     // ---------------------------------------------------------------------
     // Route. Order: local switch->diode links, row busses, column busses,
@@ -1096,6 +1143,15 @@ function generateKiCadPCB(opts) {
 
     const outPcbFile = path.join(pcbDir, `interlock_ergo_${side}_${variant}.kicad_pcb`);
     fs.writeFileSync(outPcbFile, pcbContent, 'utf8');
+
+    // The footprints are written inline by this generator and exist in no library,
+    // so KiCad's "footprint differs from the library copy" check cannot apply. Set it
+    // to ignore in the board's project file - the documented mechanism - rather than
+    // filtering it out of the DRC output, so the gate below is a plain zero.
+    const outProFile = outPcbFile.replace(/\.kicad_pcb$/, '.kicad_pro');
+    fs.writeFileSync(outProFile, JSON.stringify({
+        board: { design_settings: { rule_severities: { lib_footprint_issues: 'ignore' } } }
+    }, null, 2) + '\n');
     console.log(`Generated: ${path.basename(outPcbFile)} (${activeKeys.length} keys, ${routed.segments.length} segments, ${routed.vias.length} vias, ${routeMs} ms).`);
 
     const gerberSubdir = path.join(distDir, `gerbers_${side}_${variant}`);
@@ -1116,38 +1172,48 @@ function generateKiCadPCB(opts) {
 
     verifyNetlist({ file: outPcbFile, side, cols, colOffset, activeKeys, PROMICRO_PAD_SIGNALS, podSignals });
 
-    // DRC gate: a board that fails DRC never gets fab artifacts, and anything it
-    // published previously is withdrawn, so a dirty board cannot be ordered.
-    let drcViolations = null;
-    let drcUnconnected = null;
+    // DRC gate. The default severity set is errors AND warnings - a warning here is
+    // a fabricated-silk or drill defect (mirrored text, silk over a pad, two drills
+    // in the same place), not noise. A board that fails never gets fab artifacts, and
+    // whatever it published before is withdrawn, so a dirty board cannot be ordered.
+    // The only check switched off is library parity, in the board's .kicad_pro.
+    const drcJson = path.join(require('os').tmpdir(), `interlock_drc_${side}_${variant}.json`);
     try {
-        execSync(`kicad-cli pcb drc --severity-error --exit-code-violations -o "${drcReport}" "${outPcbFile}"`, { stdio: 'pipe' });
+        execSync(`kicad-cli pcb drc --format json --exit-code-violations -o "${drcJson}" "${outPcbFile}"`, { stdio: 'pipe' });
     } catch (e) {
-        // non-zero exit == the board has violations; the report has the detail
+        // non-zero exit == the board has violations; the JSON has the detail
     }
-    {
-        const rpt = fs.existsSync(drcReport) ? fs.readFileSync(drcReport, 'utf8') : '';
-        const mv = rpt.match(/\*\* Found (\d+) DRC violations \*\*/);
-        const mu = rpt.match(/\*\* Found (\d+) unconnected pads \*\*/);
-        drcViolations = mv ? parseInt(mv[1], 10) : -1;
-        drcUnconnected = mu ? parseInt(mu[1], 10) : 0;
-        if (rpt) fs.writeFileSync(drcReport, rpt.replace(/\*\* Created on [^*]+\*\*/, "** Created on 1970-01-01T00:00:00 **"));
+    try {
+        execSync(`kicad-cli pcb drc -o "${drcReport}" "${outPcbFile}"`, { stdio: 'pipe' });
+    } catch (e) { /* ditto: the report is written either way */ }
+
+    let drc = null;
+    try { drc = JSON.parse(fs.readFileSync(drcJson, 'utf8')); } catch (e) { /* no report */ }
+    if (fs.existsSync(drcJson)) fs.unlinkSync(drcJson);
+    const drcProblems = drc ? drc.violations : [];
+    const drcUnconnected = drc ? drc.unconnected_items.length : -1;
+    if (fs.existsSync(drcReport)) {
+        const rpt = fs.readFileSync(drcReport, 'utf8');
+        fs.writeFileSync(drcReport, rpt.replace(/\*\* Created on [^*]+\*\*/, "** Created on 1970-01-01T00:00:00 **"));
     }
 
-    if (drcViolations !== 0 || drcUnconnected !== 0) {
+    if (!drc || drcProblems.length || drcUnconnected !== 0) {
         if (fs.existsSync(gerberSubdir)) execSync(`rm -rf "${gerberSubdir}"`);
         for (const f of [zipPath, bomFile, cplFile]) {
             if (fs.existsSync(f)) fs.unlinkSync(f);
         }
+        const byType = {};
+        for (const v of drcProblems) byType[v.type] = (byType[v.type] || 0) + 1;
         console.error(
-            `  !! DRC FAILED (${drcViolations < 0 ? 'kicad-cli could not run' : `${drcViolations} violations, ${drcUnconnected} unconnected pads`})` +
+            `  !! DRC FAILED (${drc ? `${drcProblems.length} violations, ${drcUnconnected} unconnected pads` : 'kicad-cli could not run'})` +
+            (Object.keys(byType).length ? ` [${Object.entries(byType).map(([t, n]) => `${t} x${n}`).join(', ')}]` : '') +
             ` - ${path.relative(pcbDir, drcReport)}. No gerbers/BOM/CPL emitted for this board.`
         );
         process.exitCode = 1;
         return;
     }
 
-    console.log(`  DRC clean (0 violations, 0 unconnected pads) - ${path.relative(pcbDir, drcReport)}`);
+    console.log(`  DRC clean (0 errors, 0 warnings, 0 unconnected pads) - ${path.relative(pcbDir, drcReport)}`);
 
     if (fs.existsSync(gerberSubdir)) execSync(`rm -rf "${gerberSubdir}"`);
     fs.mkdirSync(gerberSubdir, { recursive: true });
@@ -1165,7 +1231,9 @@ function generateKiCadPCB(opts) {
     const zipStat = fs.statSync(zipPath);
     console.log(`  -> JLCPCB Gerber Package: ${zipName} (${(zipStat.size / 1024).toFixed(1)} KB)`);
 
-    // Individual lines for each diode in CPL and BOM (satisfies JLCPCB parser rules)
+    // BOM + CPL: one row per part, diodes and hotswap sockets alike. JLCPCB's
+    // assembler populates the bottom side only; the through-hole controller,
+    // switch, encoder and battery jack stay hand-soldered.
     let cplText = 'Designator,Mid X,Mid Y,Layer,Rotation\n';
     for (const row of cplRows) {
         cplText += `${row.designator},${row.midX},${row.midY},${row.layer},${row.rotation}\n`;
@@ -1174,7 +1242,7 @@ function generateKiCadPCB(opts) {
 
     let bomText = 'Comment,Designator,Footprint,LCSC Part #\n';
     for (const row of cplRows) {
-        bomText += `1N4148W,${row.designator},SOD-123,C81598\n`;
+        bomText += `${row.comment},${row.designator},${row.footprint},${row.lcsc}\n`;
     }
     fs.writeFileSync(bomFile, bomText, 'utf8');
 }

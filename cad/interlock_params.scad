@@ -90,15 +90,28 @@ magnet_pocket_depth = 3.2;   // 0.2 mm glue relief behind a 3.0 mm magnet
 magnet_chamfer      = 0.5;   // lead-in at the seam face
 magnet_y_frac       = [0.35, 0.70];
 
+// ---------------------------------------------------------------- USB-C
+
+// The window through the front wall, sized for the plug shell, plus an exterior
+// relief pocket the cable's overmold has to reach into: the controller's
+// receptacle sits ~3.5mm behind the outer wall face, so a flush window stops the
+// plug ~3mm short of full insertion. Standard overmolds are 11-12.5 x 6.0-6.8mm.
+usb_window_w      = 10.0;
+usb_window_h      = 4.6;
+usb_relief_w      = 13.0;
+usb_relief_h      = 7.2;
+usb_relief_d      = 2.4;   // must leave a 1.0mm flange in the wall
+usb_relief_chamfer = 0.8;
+
 // ---------------------------------------------------------------- dovetail
 
 // Sliding fit: clearance on the flanks only, the thrust faces stay tight.
-interlock_tol = 0.20;
+interlock_tol = 0.25;
 tab_protrusion = 3.0;    // must stay under seam_wall - 1.0 so the socket stays blind
 tab_throat     = 6.0;    // profile width at the seam face
 tab_head       = 9.0;    // profile width at the tab tip (the undercut)
 tab_y_frac     = [0.25, 0.75];
-tab_lead_in    = 0.8;    // chamfer at the socket mouth and tab root
+tab_lead_in    = 1.2;    // chamfer at the socket mouth and on the tab's leading edge
 
 // ---------------------------------------------------------------- guards
 
@@ -111,6 +124,8 @@ assert(tab_protrusion <= seam_wall - 1.0,
 assert(magnet_pocket_depth <= seam_wall - 1.5,
        "magnet pocket would leave less than 1.5mm behind it; thicken seam_wall");
 assert(tab_head > tab_throat, "the dovetail must be wider at the tip than at the throat");
+assert(usb_relief_d <= wall_thickness - 1.0,
+       "the USB-C relief would leave less than 1mm of wall around the window");
 assert(battery_t < standoff_h, "the cell is taller than the space under the PCB");
 assert(plate_off_x + plate_w(cols_left, choc_pitch_x) < pcb_w(cols_left, choc_pitch_x),
        "plate overhangs the PCB on the left half");
@@ -135,19 +150,30 @@ module standoff_boss(h) {
 
 // Male dovetail tab, extruded vertically so the case prints with no overhang.
 // `protrusion` runs along +X from the seam face at x = 0.
+//
+// The tab slides down into its socket, so its BOTTOM edge is the leading one: the
+// flanks are tapered in over tab_lead_in instead of meeting at a sharp 90 degree
+// corner, which catches on the print's layer seams.
 module dovetail_tab(height) {
-    hz = tab_head / 2;
-    tz = tab_throat / 2;
+    hull() {
+        linear_extrude(height = 0.01) dovetail_profile(tab_lead_in);
+        translate([0, 0, tab_lead_in]) linear_extrude(height = height - tab_lead_in) dovetail_profile(0);
+    }
+}
+
+// `flank` pulls the profile in along Y only: X has clearance of its own (the socket
+// is deeper than the tab is long) and a uniform offset would swallow the throat.
+module dovetail_profile(flank) {
+    hz = tab_head / 2 - flank;
+    tz = tab_throat / 2 - flank;
     inset = 0.8;  // start inside the wall so the union cannot end up with a
                   // coplanar face contact, which CGAL leaves as a loose shell
-    linear_extrude(height = height) {
-        polygon(points = [
-            [-inset, -tz],
-            [tab_protrusion, -hz],
-            [tab_protrusion, hz],
-            [-inset, tz]
-        ]);
-    }
+    polygon(points = [
+        [-inset, -tz],
+        [tab_protrusion, -hz],
+        [tab_protrusion, hz],
+        [-inset, tz]
+    ]);
 }
 
 // Female socket: the same profile, offset outward (flank clearance), blind, with

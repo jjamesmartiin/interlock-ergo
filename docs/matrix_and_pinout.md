@@ -59,7 +59,8 @@ The right half hosts a 5-row × 9-column matrix.
 ## Power & Battery Circuit
 
 - **Battery Input:** 3.7V LiPo with integrated PCM (Protection Circuit Module).
-- **Power Switch:** SPDT mini slide switch (MSK-12D19) connected in series between LiPo positive terminal and nice!nano `B+` pad.
+- **Power Switch:** SPDT mini slide switch (MSK-12D19) connected in series between the LiPo positive terminal and the nice!nano's battery input. On the nice!nano that input is the Pro Micro footprint's `RAW` pad, which is the same node as its `B+` pad and its charger; the switch is therefore in the charge path too, so the cell charges only with the switch ON.
 - **Battery Negative:** Direct to nice!nano `B-` / `GND`.
+- **Battery Polarity:** `J_BAT` pin 1 is BAT+, pin 2 is GND, and both are marked `+`/`-` on the front silk. Check the pack's wiring with a meter before plugging it in - reversed polarity destroys the charger.
 - **Battery Fuel Gauge:** nice!nano v2 measures cell voltage directly via internal VDDH (`zmk,battery-nrf-vddh`). No divider, no ADC pin.
 - **Cell:** protected LP402030 pack (~200 mAh; a 4 mm cell, but the PCM board makes the pack ~34 mm long and 4.5 mm thick with tape). The bay is sized for that; a 5 mm pouch does not fit.

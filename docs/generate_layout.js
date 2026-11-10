@@ -96,8 +96,14 @@ const cavX = C.wall_thickness + C.pcb_clearance / 2;
 const cavY = C.wall_thickness + C.pcb_clearance / 2;
 
 function layout(p) {
+    // The two halves are not mirror images in one respect: the left half carries the
+    // seam wall on its right, the right half on its left, so the right half's key
+    // field starts 2 mm further in (seam_wall vs wall_thickness). Both are 6 mm
+    // thick on the seam side, which is why the width formula is the same.
     const leftW = caseW(LEFT_COLS, p);
+    const rightW = caseW(RIGHT_COLS, p);
     const plateX = cavX + C.pcb_margin_x;
+    const rightPlateX = C.seam_wall + C.pcb_clearance / 2 + C.pcb_margin_x;
     const plateY = cavY + C.pcb_top_bay + C.pcb_margin_y;
     const keys = [];
     for (let r = 0; r < 5; r++) {
@@ -118,7 +124,7 @@ function layout(p) {
             if (r === 2 && (c === 7 || c === 8)) continue;
             if (r === 4 && c === 8) continue;
             keys.push({
-                x: leftW + plateX + c * p.pitchX + stagger[r] * p.pitchX + p.pitchX / 2,
+                x: leftW + rightPlateX + c * p.pitchX + stagger[r] * p.pitchX + p.pitchX / 2,
                 y: plateY + r * p.pitchY + p.pitchY / 2,
                 label: legend(rows[r].right[ri++] || ""),
                 half: "R", r, c
@@ -132,7 +138,7 @@ function layout(p) {
         const rightX = Math.min(...keys.filter((k) => k.half === "R" && k.r === r).map((k) => k.x));
         return rightX - leftX;
     });
-    return { keys, leftW, plateX, plateY, caseW: leftW, caseL: caseL(p), seamGaps };
+    return { keys, leftW, rightW, dockedW: leftW + rightW, plateX, rightPlateX, plateY, caseL: caseL(p), seamGaps };
 }
 
 // ---------------------------------------------------------------- SVG
@@ -143,7 +149,7 @@ const FOOT = 118;
 
 function svg(p) {
     const L = layout(p);
-    const totalW = L.caseW * 2;
+    const totalW = L.dockedW;
     const totalL = L.caseL;
     const scale = (W - 2 * PAD) / (totalW / 10);
     const S = scale / 10;                       // mm -> px
@@ -154,16 +160,18 @@ function svg(p) {
     out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H.toFixed(0)}" viewBox="0 0 ${W} ${H.toFixed(0)}" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">`);
     out.push(`<rect width="${W}" height="${H.toFixed(0)}" fill="#f6f7f9"/>`);
 
-    // Case outlines
-    for (const half of [0, 1]) {
-        out.push(`<rect x="${(PAD + half * L.caseW * S).toFixed(1)}" y="${PAD}" width="${(L.caseW * S).toFixed(1)}" height="${(totalL * S).toFixed(1)}" rx="${(C.fillet_r * S).toFixed(1)}" fill="${half ? '#e8ebef' : '#eef0f4'}" stroke="#9aa4b2" stroke-width="1.6"/>`);
+    // Case outlines: the right half is 36 mm wider than the left (nine columns, not
+    // seven) - drawing both at the left half's width is what made the docked width
+    // in the README wrong for two revisions.
+    for (const [half, w] of [[0, L.leftW], [1, L.rightW]]) {
+        out.push(`<rect x="${(PAD + (half ? L.leftW : 0) * S).toFixed(1)}" y="${PAD}" width="${(w * S).toFixed(1)}" height="${(totalL * S).toFixed(1)}" rx="${(C.fillet_r * S).toFixed(1)}" fill="${half ? '#e8ebef' : '#eef0f4'}" stroke="#9aa4b2" stroke-width="1.6"/>`);
     }
     // Plates
-    for (const half of [0, 1]) {
-        out.push(`<rect x="${(PAD + (half * L.caseW + L.plateX) * S).toFixed(1)}" y="${(PAD + L.plateY * S).toFixed(1)}" width="${(plateW(half ? RIGHT_COLS : LEFT_COLS, p) * S).toFixed(1)}" height="${(plateL(p) * S).toFixed(1)}" fill="#dfe4ea" stroke="#8b95a3" stroke-width="1.1" stroke-dasharray="4 3"/>`);
+    for (const [half, px, w] of [[0, L.plateX, LEFT_COLS], [1, L.leftW + L.rightPlateX, RIGHT_COLS]]) {
+        out.push(`<rect x="${(PAD + px * S).toFixed(1)}" y="${(PAD + L.plateY * S).toFixed(1)}" width="${(plateW(w, p) * S).toFixed(1)}" height="${(plateL(p) * S).toFixed(1)}" fill="#dfe4ea" stroke="#8b95a3" stroke-width="1.1" stroke-dasharray="4 3"/>`);
     }
     // Seam marker
-    out.push(`<line x1="${(PAD + L.caseW * S).toFixed(1)}" y1="${(PAD - 8)}" x2="${(PAD + L.caseW * S).toFixed(1)}" y2="${(PAD + totalL * S + 8).toFixed(1)}" stroke="#d9534f" stroke-width="2" stroke-dasharray="7 5"/>`);
+    out.push(`<line x1="${(PAD + L.leftW * S).toFixed(1)}" y1="${(PAD - 8)}" x2="${(PAD + L.leftW * S).toFixed(1)}" y2="${(PAD + totalL * S + 8).toFixed(1)}" stroke="#d9534f" stroke-width="2" stroke-dasharray="7 5"/>`);
 
     // Keys
     for (const k of L.keys) {
@@ -185,12 +193,12 @@ function svg(p) {
     // Callouts
     const gap = L.seamGaps[1];
     const seamY = PAD + (L.plateY + 1.5 * p.pitchY) * S;
-    out.push(`<text x="${(PAD + L.caseW * S + 10).toFixed(1)}" y="${(seamY - 10).toFixed(1)}" font-size="15" fill="#c0392b">seam - dovetail + magnets</text>`);
+    out.push(`<text x="${(PAD + L.leftW * S + 10).toFixed(1)}" y="${(seamY - 10).toFixed(1)}" font-size="15" fill="#c0392b">seam - dovetail + magnets</text>`);
 
     const footY = PAD + totalL * S + 34;
     out.push(`<text x="${PAD}" y="${footY}" font-size="21" font-weight="600" fill="#1f2933">Interlock Ergo - ${p.name === 'choc' ? 'Kailh Choc v1' : 'Cherry MX'} layout, ${L.keys.length} keys</text>`);
     const lines = [
-        `Case ${(L.caseW).toFixed(1)} x ${(totalL).toFixed(1)} mm per half, docked ${(totalW).toFixed(1)} mm wide. Plate ${p.plateT} mm, case ${p.depth} mm tall.`,
+        `Case ${L.leftW.toFixed(1)} x ${(totalL).toFixed(1)} mm left, ${L.rightW.toFixed(1)} x ${(totalL).toFixed(1)} mm right, docked ${(totalW).toFixed(1)} mm wide. Plate ${p.plateT} mm, case ${p.depth} mm tall.`,
         `Stagger ${stagger.join(' / ')} u keeps every letter column on its GH60 x; the 22.5 mm of shear it needs is the dead strip at each half's seam edge.`,
         `Centre of "5" to centre of "6": ${gap.toFixed(1)} mm (${(gap / p.pitchX).toFixed(1)} u) on every row - that is the docked centre gap, not ${(1.5).toFixed(1)} u.`,
         `Red outline marks the 6-Y-H-N column: 6, Y, H and N all fall on the right half.`
@@ -223,7 +231,7 @@ fs.writeFileSync(kleFile, JSON.stringify(kle(variant('choc')), null, 0) + '\n');
 console.log(`wrote ${path.relative(rootDir, kleFile)}`);
 for (const v of ['choc', 'mx']) {
     const L = layout(variant(v));
-    console.log(`  ${v}: ${L.keys.length} keys, docked width ${(L.caseW * 2).toFixed(1)} mm, 5-to-6 centre gap ${L.seamGaps.map((g) => g.toFixed(1)).join('/')} mm`);
+    console.log(`  ${v}: ${L.keys.length} keys, docked ${L.dockedW.toFixed(1)} mm wide (${L.leftW.toFixed(1)} + ${L.rightW.toFixed(1)}), 5-to-6 centre gap ${L.seamGaps.map((g) => g.toFixed(1)).join('/')} mm`);
 }
 
 // Plain-text layout table for the README. Printed, not written, so it can be

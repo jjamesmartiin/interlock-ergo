@@ -34,11 +34,14 @@ confirmed, say `UNVERIFIED` and do not build on it.
 | Seeed XIAO nRF52840 | USB-C shell | ~1.4 mm inboard of the short edge, centred on Y | Same KiCad project. |
 | Protected LiPo | cell + PCM | **LP402030: 4.0 × 20 × 30 mm cell, ~200 mAh, +3.2 mm PCM → ~34 mm pack** | LiPol Battery Co. LP402030 datasheet and PKCELL's model table. Allow 35 mm in the pocket, 4.5 mm with tape. There is no 402030 at Adafruit/SparkFun/Pimoroni; the documented 402030 is 200 mAh, not 250. |
 | 6 × 3 mm N52 magnet | pocket | Ø6.2 × 3.2 deep, flush at the seam face | Own design; a 0.1 mm radial clearance for glue and 0.2 mm of relief behind the magnet. |
+| USB-C cable overmold | max plug housing | **11-12.5 x 6.0-6.8 mm seats in the relief pocket** (13.0 x 7.2 x 2.4 deep) | Without the relief a flush window leaves the plug ~3 mm short of full insertion. The relief opens through the rim above the bay; that is intended. |
+| EC11 encoder knob | max knob outer diameter | **≤ 16.0 mm** | 18 mm pitch to Esc with 17.5 mm keycap leaves 9.25 mm radial clearance; ≥ 18 mm knob rubs keycap. |
+| JST-PH 2-Pin | polarity | **Pin 1 BAT+, Pin 2 GND** | Marked `+`/`-` on the front silk now; still check the LiPo harness, packs ship both ways. |
 
 ## Things this table caught
 
-Three of the values above were wrong when first assumed, and all three were wrong
-in a way that no test based on the netlist or DRC could see:
+These values were wrong when first assumed, and every one was wrong in a way that
+no test based on the netlist or DRC could see:
 
 1. **Hotswap solder pads on the switch pin positions.** Electrically perfect,
    physically unsolderable. Would have scrapped a PCB order.
@@ -48,5 +51,11 @@ in a way that no test based on the netlist or DRC could see:
    MSK-12D19's actuator is on the *top* face, so it is reached from above — the
    cutout was at the wrong height and the wrong axis, and is now gone entirely
    because the open controller bay already exposes it.
+4. **The USB-C window never reached the outer wall face.** The through-cut stopped
+   1.3 mm short, leaving a membrane over the port, so no cable could ever have
+   connected; the dongle's window was extruded the wrong way and cut empty space
+   *outside* its case. Both were invisible to the dimension checks and to every
+   existing test. `tests/test_alignment.js` now samples the case and dongle meshes
+   at the port and fails if the window is not open.
 
-Each of the first two is now a gate in `tests/test_alignment.js`, mutation-tested.
+Items 1, 2 and 4 are now gates in `tests/test_alignment.js`, mutation-tested.

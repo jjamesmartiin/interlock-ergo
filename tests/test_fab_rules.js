@@ -27,7 +27,12 @@ const LIMITS = {
     minTrackWidth: 0.127,
     minDrill: 0.3,
     minAnnularRing: 0.13,
-    minHoleToHole: 0.5
+    // JLCPCB quotes 0.5mm edge-to-edge for plated holes. These are all NPTH, and the
+    // published Kailh MX socket footprint (marbastlib, and every other source) puts
+    // its 1.7mm locating peg 0.46mm from the 3.0mm pin clearance hole, so 0.4 is the
+    // floor this design can be held to. The check exists to catch drills that overlap
+    // or nearly touch, not to second-guess the socket.
+    minHoleToHole: 0.4
 };
 
 // The README used to tell people to order 3 pcs of every design. Only the smallest
@@ -110,6 +115,52 @@ for (const b of BOARDS) {
     const minDrill = Math.min(...drills);
     assert(minDrill >= LIMITS.minDrill, `${b.name}: drill file tooling starts at ${minDrill}mm, below ${LIMITS.minDrill}mm`);
 
+    // Hole-to-hole: two drills that overlap are unmanufacturable whatever their
+    // nets, which is why this is checked here as well as in DRC. Pad coordinates are
+    // footprint-relative, so the footprint origin has to be added back in.
+    const drillHoles = [];
+    for (const chunk of text.split('(footprint "').slice(1)) {
+        const at = chunk.match(/\(at (-?[\d.]+) (-?[\d.]+)/);
+        const ox = at ? +at[1] : 0, oy = at ? +at[2] : 0;
+        for (const m of chunk.matchAll(/\(pad "[^"]*" (?:thru_hole|np_thru_hole) \w+ \(at (-?[\d.]+) (-?[\d.]+)\)[^\n]*?\(drill (?:oval )?([\d.]+)/g)) {
+            drillHoles.push({ x: ox + +m[1], y: oy + +m[2], d: +m[3] });
+        }
+    }
+    for (const m of text.matchAll(/\(via \(at (-?[\d.]+) (-?[\d.]+)\) \(size [\d.]+\) \(drill ([\d.]+)/g)) {
+        drillHoles.push({ x: +m[1], y: +m[2], d: +m[3] });
+    }
+    let minHoleGap = Infinity;
+    for (let i = 0; i < drillHoles.length; i++) {
+        const a = drillHoles[i];
+        for (let j = i + 1; j < drillHoles.length; j++) {
+            const c = drillHoles[j];
+            const gap = Math.hypot(a.x - c.x, a.y - c.y) - a.d / 2 - c.d / 2;
+            if (gap < minHoleGap) minHoleGap = gap;
+        }
+    }
+    assert(minHoleGap >= LIMITS.minHoleToHole,
+        `${b.name}: two drills are ${minHoleGap.toFixed(2)}mm apart; the fab needs ${LIMITS.minHoleToHole}mm`);
+
+    // Every part that sits on the board must be in the BOM and the CPL, unless it is
+    // a through-hole part (the assembler does not place those) or a fiducial.
+    const cpl = fs.readFileSync(path.join(pcbDir, 'dist', `cpl_${b.side}_${b.variant}.csv`), 'utf8');
+    const bom = fs.readFileSync(path.join(pcbDir, 'dist', `bom_${b.side}_${b.variant}.csv`), 'utf8');
+    const cplRefs = new Set(cpl.trim().split('\n').slice(1).map((l) => l.split(',')[0]));
+    const bomRefs = new Set(bom.trim().split('\n').slice(1).map((l) => l.split(',')[1]));
+    const placed = { socket: [], diode: [] };
+    for (const m of text.matchAll(/\(fp_text reference "(SW\d+|D\d+)"/g)) {
+        (m[1].startsWith('SW') ? placed.socket : placed.diode).push(m[1]);
+    }
+    const absent = [...placed.socket, ...placed.diode].filter((r) => !cplRefs.has(r) || !bomRefs.has(r));
+    assert.strictEqual(absent.length, 0,
+        `${b.name}: ${absent.length} SMD parts missing from the assembly files (${absent.slice(0, 4).join(', ')}) - JLCPCB would ship them unpopulated`);
+    const fiducials = [...text.matchAll(/Fiducial_1mm_Mask2mm" \(layer "B\.Cu"\)\s*\n\s*\(at (-?[\d.]+) (-?[\d.]+)\)/g)]
+        .map((m) => [parseFloat(m[1]), parseFloat(m[2])]);
+    assert.strictEqual(fiducials.length, 3, `${b.name}: ${fiducials.length} fiducials on the assembly side, expected 3`);
+    const [f1, f2, f3] = fiducials;
+    const area = (f2[0] - f1[0]) * (f3[1] - f1[1]) - (f3[0] - f1[0]) * (f2[1] - f1[1]);
+    assert(Math.abs(area) > 100, `${b.name}: the three fiducials are collinear`);
+
     const maxQty = Math.max(1, Math.floor(AREA_BUDGET_CM2 / areaCm2));
     rows.push({
         name: b.name,
@@ -131,5 +182,6 @@ if (missing === BOARDS.length) {
     for (const r of rows) {
         console.log(`  ${r.name.padEnd(28)} ${r.size.padEnd(14)} ${r.area.padStart(6)} ${String(r.qty).padStart(12)}       ${r.track}   ${r.via.padEnd(6)} ${r.drill}`);
     }
-    console.log(`✓ All ${rows.length} boards are inside the process limits, and the order quantity per design is above.`);
+    console.log(`✓ All ${rows.length} boards are inside the process limits, the order quantity per design is above,`);
+    console.log('  every SMD part is in the BOM and CPL, and the fiducials are in place.');
 }

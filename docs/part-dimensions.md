@@ -21,11 +21,6 @@ confirmed, say `UNVERIFIED` and do not build on it.
 | Kailh CPG135001S30 | solder pad size | **2.65 × 2.6 mm** | marbastlib and keebio (both traced to Kailh's drawing); ergogen uses 2.6 × 2.6. |
 | Kailh CPG135001S30 | pin clearance hole | **Ø3.0, unplated** | Both libraries. Unplated matters: plating it invites shorts to the socket pads, and in a hotswap build the switch pin is not soldered. |
 | Kailh MX CPG151101S11 | solder pad position | **3.275–3.55 mm outboard** — *sources disagree* | ergogen says 3.275/3.302, marbastlib says 3.55. Sources disagree by 0.275 mm; a 2.55 mm-wide pad absorbs it. `tests/test_alignment.js` accepts 3.10–3.60 for this reason. |
-| Alps EC11E (with push) | body footprint | **12.0 × 12.2 mm** | KiCad official `RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm` (12.0 × 11.6) and marbastlib `ROT_Alps_EC11E-Switch` (11.8 × 12.2). The plate cuts 13.5 mm square, which leaves print tolerance. |
-| Alps EC11E | terminals | A/B/C on 5.0 mm pitch at y = +7.5; push switch at y = −7 | Alps EC11E catalogue + both libraries. |
-| Alps EC11E | mounting posts | **11.2 mm apart** (x = ±5.6), oval 2.8 × 1.5 | Alps drawing + both libraries. Without holes for these the encoder stands on its own legs and never seats. |
-| Alps EC11E | bushing | Ø7.0 | Alps drawing. |
-| Alps EC11E | body height above PCB | **UNVERIFIED (~6.5 mm assumed)** | The Alps drawing's vertical chain could not be read and no 3D model was available. The plate clearance is driven by this, so measure a sample if the encoder ever fouls the plate. |
 | MSK-12D19 slide switch | body | **9.0 × 3.5 mm, 5.5 mm overall height** | LCSC C2904913 (DEALON MS-12D19-G2) spec table. That means ~3.5 mm body + ~2.0 mm of actuator **on the top face**, travelling along the 9.0 mm axis. |
 | MSK-12D19 | pin pitch / travel | **UNVERIFIED** | No text-readable drawing found. The footprint uses 2.0 mm pitch; measure a sample before trusting it. |
 | nice!nano v2 | board outline | **33.02 × 17.78 mm** | marbastlib's nice!nano footprints place the 24 pads at x = ±7.62, y = −13.97…+13.97 — the Pro Micro standard, 2.54 mm of board beyond each end. |
@@ -35,7 +30,6 @@ confirmed, say `UNVERIFIED` and do not build on it.
 | Protected LiPo | cell + PCM | **LP402030: 4.0 × 20 × 30 mm cell, ~200 mAh, +3.2 mm PCM → ~34 mm pack** | LiPol Battery Co. LP402030 datasheet and PKCELL's model table. Allow 35 mm in the pocket, 4.5 mm with tape. There is no 402030 at Adafruit/SparkFun/Pimoroni; the documented 402030 is 200 mAh, not 250. |
 | 6 × 3 mm N52 magnet | pocket | Ø6.2 × 3.2 deep, flush at the seam face | Own design; a 0.1 mm radial clearance for glue and 0.2 mm of relief behind the magnet. |
 | USB-C cable overmold | max plug housing | **11-12.5 x 6.0-6.8 mm seats in the relief pocket** (13.0 x 7.2 x 2.4 deep) | Without the relief a flush window leaves the plug ~3 mm short of full insertion. The relief opens through the rim above the bay; that is intended. |
-| EC11 encoder knob | max knob outer diameter | **≤ 16.0 mm** | 18 mm pitch to Esc with 17.5 mm keycap leaves 9.25 mm radial clearance; ≥ 18 mm knob rubs keycap. |
 | JST-PH 2-Pin | polarity | **Pin 1 BAT+, Pin 2 GND** | Marked `+`/`-` on the front silk now; still check the LiPo harness, packs ship both ways. |
 
 ## Things this table caught
@@ -46,7 +40,7 @@ no test based on the netlist or DRC could see:
 1. **Hotswap solder pads on the switch pin positions.** Electrically perfect,
    physically unsolderable. Would have scrapped a PCB order.
 2. **No holes for the EC11 mounting posts.** The encoder would have stood on its
-   own legs.
+   own legs. (It has since been dropped: see the audit's P1-12.)
 3. **The power switch cutout was in a side wall at the actuator's height.** An
    MSK-12D19's actuator is on the *top* face, so it is reached from above — the
    cutout was at the wrong height and the wrong axis, and is now gone entirely

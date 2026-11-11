@@ -2,15 +2,30 @@
 
 ## 1. Layout and why the columns are where they are
 
-76 keys, all 1u. No stabilisers, no wide keys: every keycap is a size any Choc or
+71 keys, all 1u. No stabilisers, no wide keys: every keycap is a size any Choc or
 MX set already contains, which removes the single most annoying sourcing problem in
 small-batch keyboard building.
 
 The ANSI feel comes from the row stagger, not from wide modifiers. Each whole row is
 shifted by 0 / 0.5 / 0.75 / 1.25 / 0.25 u so that every letter column lands on its
-GH60 x position, so touch typists keep their muscle memory. The price is that the
+GH60 column position, so touch typists keep their muscle memory. The offsets are
+GH60's exactly (0 / 0.5 / 0.75 / 1.25 u against GH60's 1 / 1.5 / 1.75 / 2.25 u
+letters) and so are the absolute columns: 6 left + 9 right = GH60's 15 u. That is
+why there is no function column and no rotary encoder - both lived in a seventh
+left column, and dropping it is what buys the parity. The price is that the
 stagger needs 22.5 mm of horizontal shear, which a straight seam converts into dead
 case width at each half's seam edge — see the README's note on the 69 mm centre gap.
+
+**One band stack, three materials.** The board is a stack of full-width horizontal
+bands — the controller bay, one band per key row, the bottom margin — and each band's
+outer edge sits `pcb_margin_x` outside that row's outermost key. That one definition
+builds the PCB's `Edge.Cuts` polygon, the plate outline and the case walls, in two
+languages: `pcb/generate_pcb.js` for the board and `cad/interlock_params.scad` for
+the printed parts, with `tests/test_alignment.js` sampling the exported meshes to
+confirm the two agree. The seam face is deliberately *not* part of the silhouette:
+it is a joint, and the dovetail and magnets need a straight plane, which is why the
+dead strip along the seam is unavoidable and the stagger shows up as the 69 mm docked
+gap rather than as a shape.
 
 `6`, `Y`, `H` and `N` are on the right half. That matches the convention of every
 6-column split (Lily58, Sofle, Iris, Kyria) and of ANSI, so it is a correctness

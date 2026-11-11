@@ -9,7 +9,6 @@
  * recomputes the key grid from cad/interlock_params.scad and compares it against
  * the switch footprints actually present in each generated board.
  *
- * It also checks that the encoder sits where the plate expects its through-hole,
  * and that every switch has its own diode net (a shared net silently couples two
  * keys).
  *
@@ -50,12 +49,11 @@ assert(Math.abs(MARGIN_Y - c.pcb_margin_y) < 1e-9, 'pcb_margin_y drift between g
 assert(Math.abs(TOP_BAY - c.pcb_top_bay) < 1e-9, 'pcb_top_bay drift between generator and CAD');
 assert(Math.abs(1.25 - c.stagger_max_u) < 1e-9, 'stagger_max_u drift');
 
-// Which matrix positions actually carry a switch. The encoder owns RC(0,0) on the
-// left half, and the right half's home row and bottom row stop short.
+// Which matrix positions actually carry a switch: the left bottom row skips one, and
+// the right half's home row and bottom row stop short.
 function hasSwitch(side, r, col) {
     if (side === 'left') {
-        if (r === 4 && col === 5) return false;   // omitted space position
-        if (r === 0 && col === 0) return false;   // EC11 encoder, not a switch
+        if (r === 4 && col === 4) return false;   // omitted space position
         return true;
     }
     if (r === 2 && (col === 7 || col === 8)) return false;  // home row ends at Enter
@@ -133,39 +131,12 @@ for (const b of boards) {
     assert.strictEqual(problems.length, 0,
         `${path.basename(b.file)}: switch grid does not match the plate formula:\n    ${problems.slice(0, 8).join('\n    ')}`);
 
-    // Encoder on the left half, at the RC(0,0) grid position.
-    if (b.side === 'left') {
-        const enc = fps.filter((f) => /Encoder/i.test(f.name));
-        assert.strictEqual(enc.length, 1, `${path.basename(b.file)}: expected exactly one encoder footprint`);
-        const offsetX = MARGIN_X + v.pitchX * 0.5;
-        const offsetY = TOP_BAY + MARGIN_Y + v.pitchY * 0.5;
-        assert(Math.abs(enc[0].x - offsetX) < 0.02 && Math.abs(enc[0].y - offsetY) < 0.02,
-            `${path.basename(b.file)}: encoder at (${enc[0].x}, ${enc[0].y}) is not on the plate RC(0,0) position (${offsetX}, ${offsetY})`);
-        // The EC11 body stands on two 2.8 x 1.5mm mounting posts. Without holes for
-        // them the encoder never seats on the board - the same class of defect as a
-        // hotswap pad sitting on a switch pin, and equally invisible to DRC.
-        const encChunk = fs.readFileSync(b.file, 'utf8').split('(footprint "')
-            .find((c) => /^RotaryEncoder/.test(c));
-        const mp = (encChunk.match(/\(pad "" np_thru_hole oval \(at (-?[\d.]+) (-?[\d.]+)\)/g) || [])
-            .map((t) => t.match(/at (-?[\d.]+) (-?[\d.]+)/).slice(1).map(Number))
-            .sort((q, r) => q[0] - r[0]);
-        assert.strictEqual(mp.length, 2,
-            `${path.basename(b.file)}: encoder has ${mp.length} mounting-post slots, expected 2`);
-        assert(mp.length === 2 && Math.abs(mp[0][0] + 5.6) < 0.01 && Math.abs(mp[1][0] - 5.6) < 0.01 &&
-            mp.every((q) => Math.abs(q[1]) < 0.01),
-            `${path.basename(b.file)}: encoder mounting slots at ${JSON.stringify(mp)}, expected (-5.6,0) and (5.6,0)`);
-    } else {
-        assert.strictEqual(fps.filter((f) => /Encoder/i.test(f.name)).length, 0,
-            `${path.basename(b.file)}: right half must not carry an encoder`);
-    }
-
     // Every switch must reach the matrix through its own diode net: a shared net
     // silently couples two keys, and the board still passes DRC.
     const diodeNets = [...fs.readFileSync(b.file, 'utf8').matchAll(/\(net \d+ "(SW_D_R\d+_C\d+)"\)/g)]
         .map((m) => m[1]);
-    // One SW_D net per key, plus one for the encoder push switch on the left half.
     const uniqueDiodeNets = new Set(diodeNets);
-    const wantNets = expected.length + (b.side === "left" ? 1 : 0);
+    const wantNets = expected.length;
     assert.strictEqual(uniqueDiodeNets.size, wantNets,
         `${path.basename(b.file)}: ${uniqueDiodeNets.size} distinct diode nets, expected ${wantNets}`);
 
@@ -259,15 +230,15 @@ for (const [variant, v] of Object.entries(variants)) {
         const apX = (r, col) => v.pitchX / 2 + col * v.pitchX + stagger[r] * v.pitchX;
         const apY = (r) => v.pitchY / 2 + r * v.pitchY;
         const zMid = plateT / 2;
-        const hasAp = (r, col) => hasSwitch(side, r, col) || (side === 'left' && r === 0 && col === 0);
+        const hasAp = (r, col) => hasSwitch(side, r, col);
         const cols = COLS[side];
 
         const bad = [];
-        // Each aperture is 14.0mm square (13.5 for the encoder body), so probe just
+        // Each aperture is 14.0mm square, so probe just
         // inside and just outside its edge on both axes. That pins the hole to
         // +/-0.25mm in position and edge-to-edge size - a uniform 1mm shift of the
         // whole grid is invisible to a single centre sample, and this catches it.
-        const half = (r, col) => (side === 'left' && r === 0 && col === 0 ? 13.5 : c.choc_switch_cutout) / 2;
+        const half = () => c.choc_switch_cutout / 2;
         for (let r = 0; r < 5; r++) {
             for (let col = 0; col < cols; col++) {
                 if (!hasAp(r, col)) continue;
@@ -296,22 +267,55 @@ for (const [variant, v] of Object.entries(variants)) {
         assert.strictEqual(bad.length, 0,
             `interlock_plate_${variant}_${side}.stl: ${bad.slice(0, 4).join("; ")}`);
 
-        // The case must have the plate rebate where the plate actually is.
+        // The case must follow the same band outline as the PCB, with the plate rebate
+        // cut where the plate actually is. Sampled per row, because the silhouette steps
+        // between rows - one sample at mid-height would miss a wall in the wrong place.
         const wallL = side === 'left' ? c.wall_thickness : c.seam_wall;
         const cavX = wallL + c.pcb_clearance / 2;
         const cavY = c.wall_thickness + c.pcb_clearance / 2;
-        const px = cavX + MARGIN_X;
         const py = cavY + TOP_BAY + MARGIN_Y;
         const plateW = cols * v.pitchX + c.stagger_max_u * v.pitchX;
         const plateL = 5 * v.pitchY;
         const zAbove = ledgeZ + 0.2;
+        const inw = side === 'left' ? 1 : -1;   // toward the middle of the board
+        // Same band edges the PCB generator and interlock_params.scad derive.
+        const rowEdge = (r) => side === 'left'
+            ? stagger[r] * v.pitchX
+            : MARGIN_X + (stagger[r] + cols) * v.pitchX + MARGIN_X;
+        const keyFieldOuter = (r) => side === 'left'
+            ? MARGIN_X + stagger[r] * v.pitchX
+            : MARGIN_X + (stagger[r] + cols) * v.pitchX;
 
-        assert(!insideMesh(kase, px + plateW / 2, py + plateL / 2, zAbove),
+        assert(!insideMesh(kase, cavX + keyFieldOuter(0) + plateW * 0.4, py + plateL / 2, zAbove),
             `interlock_${variant}_${side}.stl: no opening for the plate at its centre - the plate would not drop in`);
-        assert(insideMesh(kase, wallL / 2, py + plateL / 2, zAbove),
-            `interlock_${variant}_${side}.stl: the seam wall is missing where the plate ledge should be`);
-        assert(!insideMesh(kase, px + plateW / 2, py + plateL / 2, ledgeZ - 0.2),
+        assert(!insideMesh(kase, cavX + keyFieldOuter(0) + 1, py + plateL / 2, ledgeZ - 0.2),
             `interlock_${variant}_${side}.stl: the cavity is not open below the plate ledge`);
+        for (let r = 0; r < 5; r++) {
+            const midY = py + (r + 0.5) * v.pitchY;
+            const wallX = cavX + rowEdge(r) - inw * (c.wall_thickness + c.pcb_clearance / 2 - c.wall_thickness / 2);
+            assert(insideMesh(kase, wallX, midY, zAbove),
+                `interlock_${variant}_${side}.stl: no case wall at the row ${r} silhouette edge`);
+            const shelfX = cavX + keyFieldOuter(r) - inw * 0.6;
+            assert(insideMesh(kase, shelfX, midY, zAbove),
+                `interlock_${variant}_${side}.stl: no shelf for the plate at row ${r}`);
+            const rebateX = cavX + keyFieldOuter(r) + inw * 0.4;
+            assert(!insideMesh(kase, rebateX, midY, zAbove),
+                `interlock_${variant}_${side}.stl: the plate rebate is not open at row ${r}`);
+        }
+
+        // A boss under every PCB mounting hole, tall enough to meet the PCB.
+        const be = rowEdge(4);
+        const boardWt = cols * v.pitchX + 2 * MARGIN_X + c.stagger_max_u * v.pitchX;
+        const holes = [[4, 4], [boardWt - 4, 4],
+                       [side === 'left' ? be + 4 : be - 4, 5 * v.pitchY + 2 * MARGIN_Y + TOP_BAY - 4],
+                       [side === 'left' ? boardWt - 4 : 4, 5 * v.pitchY + 2 * MARGIN_Y + TOP_BAY - 4]];
+        for (const [hx, hy] of holes) {
+            // Sample the boss ring, not its 1.6mm screw pilot.
+            assert(insideMesh(kase, cavX + hx - 2.2, cavY + hy, c.floor_thickness + 0.6),
+                `interlock_${variant}_${side}.stl: no boss under the PCB mounting hole at (${hx.toFixed(1)}, ${hy.toFixed(1)})`);
+            assert(insideMesh(kase, cavX + hx - 2.2, cavY + hy, c.floor_thickness + c.standoff_h - 0.3),
+                `interlock_${variant}_${side}.stl: the boss under (${hx.toFixed(1)}, ${hy.toFixed(1)}) is too short`);
+        }
 
         // USB-C: the window has to be open through the front wall, with the exterior
         // relief pocket for the cable overmold. Both have shipped broken here: the

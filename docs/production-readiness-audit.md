@@ -60,7 +60,7 @@ three of them would have been discovered only by a buyer:
    drew the right half at the left half's width and offset its key field as if it
    had the left half's outer wall. So the diagram, the KLE file, the README table
    and the "67 mm centre gap" all inherited a two-column error: the real figures
-   are **386.2 mm docked** and a **69.1 mm** 5-to-6 centre gap (405.6 / 71.5 mm for
+   are **368.2 mm docked** and a **69.1 mm** 5-to-6 centre gap (386.6 / 71.5 mm for
    MX). Both halves' real widths and both cavity offsets are now computed
    separately, and the seam gap is taken from the drawn key positions rather than
    from a formula.
@@ -78,9 +78,9 @@ own docked width and seam gap so the next reader can check them against the CAD.
 
 The generator now contains a real two-layer grid router (0.4 mm grid, 0.25 mm
 tracks, 0.6/0.3 mm vias) instead of hand-drawn bus diagonals. Nets are grown
-nearest-terminal-first from the already-routed tree in a fixed order: the 34/42
-local switch-to-diode links, then ROW0–4, then the column busses, then the encoder,
-then the power tree. Occupancy is per-layer with a net owner and a guard on the four
+nearest-terminal-first from the already-routed tree in a fixed order: the 29/42
+local switch-to-diode links, then ROW0–4, then the column busses, then the power
+tree. Occupancy is per-layer with a net owner and a guard on the four
 orthogonal neighbours, which turns the 0.2 mm clearance rule into a construction
 property rather than a post-hoc check.
 
@@ -88,10 +88,10 @@ Result, from a clean `pcb/dist`:
 
 | Board | DRC | Unconnected | Segments | Vias |
 |---|---|---|---|---|
-| left choc | 0 | 0 | 5600 | 81 |
-| right choc | 0 | 0 | 6086 | 83 |
-| left mx | 0 | 0 | 6147 | 77 |
-| right mx | 0 | 0 | 6758 | 93 |
+| left choc | 0 | 0 | 4596 | 55 |
+| right choc | 0 | 0 | 6088 | 83 |
+| left mx | 0 | 0 | 4792 | 50 |
+| right mx | 0 | 0 | 6760 | 93 |
 
 **A defect the router work exposed:** the original footprint put the hotswap
 solder pads *on the switch pin positions*. That is electrically perfect - the
@@ -118,8 +118,7 @@ Two mechanisms were added, both of which the first audit asked for:
   matrix. It throws on any mismatch, and is negative-tested by swapping `D4/D5`.
 - **`tests/test_alignment.js`** independently recomputes the key grid from
   `cad/interlock_params.scad` and asserts that every switch footprint on all four
-  boards sits on the plate's aperture grid, that the encoder is on `RC(0,0)` of the
-  left half and absent from the right, and that every key owns a distinct
+  boards sits on the plate's aperture grid and that every key owns a distinct
   `SW_D_*` diode net.
 
 **Residual risk:** the router is sequential-greedy. A future footprint or pitch
@@ -133,20 +132,20 @@ by **reading the already-verified board file** - every reference, footprint, pad
 number and pad net comes out of the `.kicad_pcb`, so the schematic cannot disagree
 with the copper and no electrical knowledge is duplicated. Each key is a cell of
 socket -> diode with its column and row on global labels and the per-key net on a
-local label; the controller's 24 pads, the power tree and the encoder are drawn in
-the power section, with `no_connect` markers where the board has no net.
+local label; the controller's 24 pads and the power tree are drawn in the power
+section, with `no_connect` markers where the board has no net.
 
 What it verifies on every run, per half:
 
 | Claim | left | right |
 |---|---|---|
-| pads diffed pin-by-pin against the board | 168 | 197 |
+| pads diffed pin-by-pin against the board | 145 | 197 |
 | ERC errors | 0 | 0 |
-| ERC warnings | 142 | 174 |
+| ERC warnings | 122 | 174 |
 | choc board vs mx board, all pad nets | identical | identical |
 | `kicad-cli sch export netlist` vs the board | exact match | exact match |
 
-The 142/174 warnings are two classes and they are asserted to be *only* those:
+The 122/174 warnings are two classes and they are asserted to be *only* those:
 `lib_symbol_issues` and `footprint_link_issues`, i.e. "this library nickname is not
 in the project's symbol/footprint table" - true by construction, because the symbols
 are embedded in `lib_symbols` and the footprints are inline in the board. Any other
@@ -169,16 +168,22 @@ The row stagger (0 / 0.5 / 0.75 / 1.25 / 0.25 u) needs 22.5 mm of horizontal
 shear. With a straight seam plane that shear lands as dead case width on each
 half's seam edge, so the centre-to-centre distance between `5` and `6` is
 **69.1 mm on every row** (3.8 u), not the "~46 mm" claimed in the first README
-and not the ~1.5 u of a normal staggered board. Docked width is 386.2 mm, because
-the right half has nine columns to the left half's seven.
+and not the ~1.5 u of a normal staggered board. Docked width is 368.2 mm, because
+the right half has nine columns to the left half's six.
 
 **Decision:** ship as-is and state it plainly (README, generated layout diagram,
 docs/architecture.md). This is a split keyboard, not a 65 %; the halves are used
 apart most of the time, and the width is the honest price of a straight seam plus
 ANSI column positions. A staircase seam that follows the row edges would drop the
-gap to about 24 mm, but it rewrites the case outline, the dovetail joint and the
-plate outline, and it cannot be validated here without printing it. It stays on
-the roadmap rather than in this tree.
+gap to about 24 mm, but the seam face is the joint - dovetail and magnets need a
+straight plane - so it would mean a different interlock altogether. On the roadmap,
+not in this tree.
+
+What *did* change: the silhouette. The PCB, plate and case are now built from one
+band stack, so the outer edge steps with the row stagger and hugs the keys instead
+of enclosing 8-30 mm of dead copper on alternating sides of each row. That is a
+shape change, not a size change - the bounding boxes, the docked width and the
+docked gap are all unchanged.
 
 ### P1-2. Cell capacity is 200 mAh, not 500–800 mAh — ACCEPTED
 
@@ -226,7 +231,7 @@ side at asymmetric positions, excluded from the position files and registered wi
 the router as dead copper so no track can cross them. They are in
 the `B.Cu`/`B.Mask` gerbers.
 
-ESD/TVS protection and test points remain deliberately absent: this is a 76-key
+ESD/TVS protection and test points remain deliberately absent: this is a 71-key
 matrix with no active silicon on the board, the controller is a socketed module
 that can be replaced for $20, and adding TVS arrays to 15 column lines would double
 the part count for a failure mode a hobby keyboard does not have. If this ever
@@ -272,12 +277,11 @@ the regulator instead) is not available on a nice!nano, whose only battery entry
 point is that node. Documented in `docs/architecture.md` and `docs/assembly.md`:
 the keyboard charges with the switch ON.
 
-### P1-9. ~~JLCPCB SMT packages omit all 76 hotswap sockets~~ — FIXED
+### P1-9. ~~JLCPCB SMT packages omit all the hotswap sockets~~ — FIXED
 
-`cpl_*.csv` and `bom_*.csv` now carry one row per placed part: the 76 diodes and
+`cpl_*.csv` and `bom_*.csv` now carry one row per placed part: every diode and
 every socket, with its LCSC number (`C5333465` Choc / `C2800547` MX) and footprint.
-The encoder cell on the left half correctly has a diode but no socket. The
-through-hole parts (controller, slide switch, encoder, battery jack) stay out of
+The through-hole parts (controller, slide switch, battery jack) stay out of
 the SMT package on purpose - JLCPCB's economic service does not place them - and
 `docs/bom.md` says so.
 
@@ -308,8 +312,8 @@ through-hole pad drills as via-forbidden and steers around them.
 ### P1-11. Left spacebar is 1u with a 1u dead gap — ACCEPTED
 
 `pcb/generate_pcb.js` comments state "Row 4 skips col 5 (Space_L is 2.25u)". The
-switch footprint is placed on the standard 1u column grid (`c = 4`), not centered
-at `4.5u`. A 2.25u keycap has a center stem and would collide with the Alt switch
+switch footprint is placed on the standard 1u column grid (column 3, after the
+function column was removed), not centred between two columns. A 2.25u keycap has a center stem and would collide with the Alt switch
 at `c = 3`, so `Space_L` is a 1u keycap and a 1u gap remains between Space and Fn1.
 
 **Decision:** keep it and document it (`docs/assembly.md` - do not buy a 2u or
@@ -318,12 +322,13 @@ back at row 4, column 5: one line in the generator, one in the plate, one bindin
 in the keymap, and the 19 mm hole becomes the 77th key. That is a layout decision
 for the designer, not a defect fix, so it is recorded here rather than taken.
 
-### P1-12. Rotary encoder knob rubs against Esc if >= 18 mm — DOCUMENTED
+### P1-12. ~~Rotary encoder knob rubs against Esc if >= 18 mm~~ — CLOSED (encoder removed)
 
-The EC11 encoder at `(0, 0)` is 18.0 mm (Choc) / 19.05 mm (MX) from the Esc switch
-at `(0, 1)`. An MBK Choc keycap half-width is 8.75 mm, leaving 9.25 mm of radial
-clearance from the encoder shaft, so a knob of 18 mm or more rubs. 16 mm is the
-safe ceiling, and `docs/assembly.md` + `docs/part-dimensions.md` now say so.
+The EC11 sat at `(0, 0)`, 18.0 mm (Choc) / 19.05 mm (MX) from the Esc switch, which
+capped the knob at ~16 mm. The encoder is no longer fitted: it lived in the left
+function column, and that column was removed to put the letter block on GH60's own
+columns. `RC(0,0)` is now the Esc key itself, pro_micro 21/20 and one column pin
+are unused pads, and the plate no longer has an encoder through-hole.
 
 ### P1-13. ~~Vertical dovetail slide has tight tolerance and no bottom lead-in~~ — FIXED
 
@@ -373,7 +378,7 @@ magnets already damp. The undercut assert still holds (9 mm head, 6 mm throat,
 
 | Claim | How it was checked |
 |---|---|
-| 76 unique matrix positions, 34 left + 42 right | `tests/test_matrix.js` |
+| 71 unique matrix positions, 29 left + 42 right, in 15 columns | `tests/test_matrix.js` |
 | `col-offset = <7>` on the transform, not the kscan | `tests/test_matrix.js` |
 | `CONFIG_ZMK_SPLIT` set for all three shields | `tests/test_matrix.js` |
 | `<shield>.conf` files named so Zephyr actually loads them | `tests/test_matrix.js` |
@@ -389,13 +394,15 @@ magnets already damp. The undercut assert still holds (9 mm head, 6 mm throat,
 | Every SMD part on the board is in both `bom_*.csv` and `cpl_*.csv`, and the three fiducials are on the assembly side and not collinear | `tests/test_fab_rules.js` |
 | No two drills are closer than 0.4 mm edge-to-edge, and every via keeps that gap from a pad drill | `tests/test_fab_rules.js`, and the router's via-forbidden map |
 | Emitting the same sources twice produces byte-identical boards and gerber zips | ran `pcb/generate_pcb.js` twice and compared md5 |
-| Layout diagram matches the keymap | `docs/generate_layout.js` parses the keymap; 76 keys, labels match |
-| Every PCB switch footprint is on the plate's aperture grid, encoder included, and every key has its own diode net | `tests/test_alignment.js`, against all four boards |
+| Layout diagram matches the keymap | `docs/generate_layout.js` parses the keymap; 71 keys, labels match |
+| Every PCB switch footprint is on the plate's aperture grid, and every key has its own diode net | `tests/test_alignment.js`, against all four boards |
+| The case wall, the plate shelf and the plate rebate are all where the band outline says, at every row, and a boss sits under each of the four mounting holes | `tests/test_alignment.js` samples the case meshes per row; mutation-tested by stepping one band 1mm |
+| The PCB's Edge.Cuts polygon is the traced boundary of the band stack, all four mounting holes are inside it, and the fiducials are inside the bottom band | `tests/test_fab_rules.js` (shoelace area + point-in-polygon)` |
 | Hotswap solder pads sit 3.15-3.40 mm outboard of a 3.0 mm pin clearance hole, as the socket requires | `tests/test_alignment.js`, mutation-tested |
 | The exported plate meshes really have a 14.0mm aperture where each key goes, material in the webs between them, and the case really has the rebate where the plate lands | `tests/test_alignment.js` samples the STLs with a tilted ray cast; mutation-tested by shifting the aperture grid 1mm |
 | Track width, via annular ring, pad annular ring and drill sizes are inside JLCPCB's 2-layer process limits - DRC cannot prove this, because KiCad's default minimums are 0 | `tests/test_fab_rules.js` |
 | Order quantity per design stays inside the 650 cm² area budget | `tests/test_fab_rules.js` (it is 3 for the left Choc board and 2 for the others, not 3 for all) |
-| **All three shields compile, link and emit `zmk.uf2`** | `nix build .#firmware-{left,right,dongle}` on ARM GCC 13.3 — left 21.00 % FLASH / 12.59 % RAM, right 20.84 % / 12.48 %, dongle 26.36 % / 20.38 % |
+| **All three shields compile, link and emit `zmk.uf2`** | `nix build .#firmware-{left,right,dongle}` on ARM GCC 13.3 — left 20.84 % FLASH / 12.45 % RAM, right 20.84 % / 12.47 %, dongle 26.24 % / 19.73 % |
 | The USB-C window is open through the case wall, with the overmold relief, and open through the dongle wall **and** its lid's lip | `tests/test_alignment.js` samples the exported meshes at the port; mutation-tested by restoring the old case |
 | The DRC gate fails on warnings, not just errors | a `hole_to_hole` warning blocked the left MX board until the router was fixed |
 | The schematic is drawn from the verified board and matches it pad for pad | `pcb/generate_schematic.js`: `kicad-cli sch erc` (0 errors, only the two explained library-nickname warning classes) and a 168/197-pad netlist diff, plus a choc-vs-mx net comparison; mutation-tested by renaming one mx pad net |
@@ -411,7 +418,6 @@ magnets already damp. The undercut assert still holds (9 mm head, 6 mm throat,
   quoted.
 - **nice!nano v2 exact outline** (17.8 × 33.0 mm is inferred from the Pro Micro
   pad grid) and the **nRF52840 dongle's** dimensions.
-- **The encoder's plate clearance** (13.5 mm square) against your specific EC11.
 - **RF performance** of the docked assembly, with the two radios ~150 mm apart and
   magnets 15 mm from each antenna.
 - **Battery runtime.** The 1–2 week figure is arithmetic from a 200 mAh pack and a

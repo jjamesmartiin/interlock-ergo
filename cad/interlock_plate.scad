@@ -17,28 +17,24 @@ pitch_y = is_mx ? mx_pitch_y : choc_pitch_y;
 plate_t = is_mx ? mx_plate_thickness : choc_plate_thickness;
 cutout  = is_mx ? mx_switch_cutout : choc_switch_cutout;
 
-enc_body   = 13.5;   // EC11 body clearance square (through hole)
-
 module switch_plate(half) {
     ncols = (half == "left") ? cols_left : cols_right;
-    pw    = plate_w(ncols, pitch_x);
-    pl    = plate_l(pitch_y);
+
+    // Same stepped outline as the PCB and the case rebate: a rectangular plate would
+    // stick out through the case wall on the rows where the silhouette steps in.
+    // Origin stays at the plate's top-left corner (= plate_off_x/plate_off_y in PCB
+    // coordinates), so the aperture maths below is unchanged.
+    bands = plate_bands(ncols, pitch_x, pitch_y, half == "left");
 
     difference() {
-        cube([pw, pl, plate_t]);
+        translate([-plate_off_x, -plate_off_y, 0])
+            linear_extrude(height = plate_t) bands_2d(bands);
 
         for (r = [0 : rows - 1]) {
             for (c = [0 : ncols - 1]) {
                 x0 = c * pitch_x + row_stagger_u[r] * pitch_x;
                 y0 = r * pitch_y;
-                if (half == "left" && r == 0 && c == 0) {
-                    // Rotary encoder: the 12.4mm body sits on the PCB and passes
-                    // straight through the plate, so this must be a through hole.
-                    // centre=true centres Z as well, so anchor it on the plate mid-plane
-                    // or the cut only reaches partway through and the body bottoms out.
-                    translate([x0 + pitch_x / 2, y0 + pitch_y / 2, plate_t / 2])
-                        cube([enc_body, enc_body, plate_t + 2], center = true);
-                } else if (half == "left" && r == 4 && c == 5) {
+                if (half == "left" && r == 4 && c == 4) {
                     // No switch here: the left bottom row skips a position.
                 } else if (half == "right" && r == 2 && (c == 7 || c == 8)) {
                     // Home row ends at Enter.

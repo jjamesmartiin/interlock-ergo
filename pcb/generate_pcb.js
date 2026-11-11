@@ -171,31 +171,11 @@ function verifyNetlist(cfg) {
     for (let p = 1; p <= 24; p++) expected.set(`U1|${p}`, padNet(p));
     activeKeys.forEach((k, i) => {
         const n = i + 1;
-        const isEncPos = side === 'left' && k.r === 0 && k.c === 0;
-        if (!isEncPos) {
-            expected.set(`SW${n}|1`, `COL${colOffset + k.c}`);
-            expected.set(`SW${n}|2`, `SW_D_R${k.r}_C${k.c}`);
-        }
+        expected.set(`SW${n}|1`, `COL${colOffset + k.c}`);
+        expected.set(`SW${n}|2`, `SW_D_R${k.r}_C${k.c}`);
         expected.set(`D${n}|1`, `ROW${k.r}`);
         expected.set(`D${n}|2`, `SW_D_R${k.r}_C${k.c}`);
     });
-    let encPins = [];
-    if (side === 'left') {
-        const single = (key) => {
-            const m = overlay.match(new RegExp(`${key}\\s*=\\s*<&pro_micro\\s+(\\d+)`));
-            if (!m) throw new Error(`netlist check: no ${key} in the ${side} overlay`);
-            return parseInt(m[1], 10);
-        };
-        const aPin = single('a-gpios'), bPin = single('b-gpios');
-        if (dNet(aPin) !== 'ENC_A') throw new Error('netlist check: overlay encoder A is not on the ENC_A pad');
-        if (dNet(bPin) !== 'ENC_B') throw new Error('netlist check: overlay encoder B is not on the ENC_B pad');
-        encPins = [`ENC_A=D${aPin}`, `ENC_B=D${bPin}`];
-        expected.set('ENC1|A', 'ENC_A');
-        expected.set('ENC1|B', 'ENC_B');
-        expected.set('ENC1|C', 'GND');
-        expected.set('ENC1|S1', 'COL0');
-        expected.set('ENC1|S2', 'SW_D_R0_C0');
-    }
     expected.set('SW_PWR|1', 'BAT_PLUS');
     expected.set('SW_PWR|2', 'RAW');
     expected.set('SW_PWR|3', '');
@@ -232,14 +212,13 @@ function verifyNetlist(cfg) {
     }
     console.log(
         `  netlist verified: 24 controller pads, ${rowPins.length} rows, ${colPins.length} cols,` +
-        ` ${activeKeys.length} switches+diodes${side === 'left' ? ', encoder' : ''}, power tree - all match the ZMK overlay.`
+        ` ${activeKeys.length} switches+diodes, power tree - all match the ZMK overlay.`
     );
     console.log(
         '    pin map: ' +
         [
             ...rowPins.map((p, r) => `ROW${r}=D${p}`),
-            ...colPins.map((p, i) => `COL${colOffset + i}=D${p}`),
-            ...encPins
+            ...colPins.map((p, i) => `COL${colOffset + i}=D${p}`)
         ].join(' ')
     );
 }
@@ -262,9 +241,64 @@ const R_VIA_DRILL = 0.3;     // via drill (mm)
 const R_PAD_MARGIN = 0.65;   // centreline clearance from pad copper (covers track + via)
 const R_HOLE_MARGIN = 0.8;   // centreline clearance outside an NPTH hole radius
 const R_EDGE_MARGIN = 0.9;   // centreline clearance inside the board edge
+const R_EDGE_CLEAR_CU = 0.5; // KiCad's copper-to-edge rule, used to widen the outline
 const R_VIA_HOLE_GAP = 0.4;    // edge-to-edge gap between a via drill and a pad drill
 const R_FREE = 0;
 const R_BLOCK = -1;
+
+/* The board outline is a stack of full-width horizontal bands (the controller bay,
+ * one band per key row, the bottom margin). Tracing the boundary of that stack is
+ * exact and needs no general polygon offsetting, and the same band list is what the
+ * OpenSCAD side builds the case and plate from. */
+function bandsToPolygon(bands) {
+    const pts = [[bands[0].x0, bands[0].y0], [bands[0].x1, bands[0].y0]];
+    let prev = bands[0];
+    for (let i = 1; i < bands.length; i++) {
+        const b = bands[i];
+        if (b.x1 !== prev.x1) pts.push([prev.x1, b.y0], [b.x1, b.y0]);
+        prev = b;
+    }
+    const last = bands[bands.length - 1];
+    pts.push([last.x1, last.y1], [last.x0, last.y1]);
+    prev = last;
+    for (let i = bands.length - 2; i >= 0; i--) {
+        const b = bands[i];
+        if (b.x0 !== prev.x0) pts.push([prev.x0, b.y1], [b.x0, b.y1]);
+        prev = b;
+    }
+    // Drop the duplicate the trace leaves at the start, and any zero-length segment.
+    const out = [];
+    for (const p of pts) {
+        const q = out[out.length - 1];
+        if (!q || Math.abs(q[0] - p[0]) > 1e-9 || Math.abs(q[1] - p[1]) > 1e-9) out.push(p);
+    }
+    if (Math.abs(out[0][0] - out[out.length - 1][0]) < 1e-9 &&
+        Math.abs(out[0][1] - out[out.length - 1][1]) < 1e-9) out.pop();
+    return out;
+}
+
+function pointInPolygon(poly, x, y) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
+        if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+}
+
+// Distance from a point to the polygon's edges, signed: positive inside.
+function outlineSignedDistance(poly, x, y) {
+    let best = Infinity;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
+        const dx = xj - xi, dy = yj - yi;
+        const len2 = dx * dx + dy * dy;
+        const t = len2 ? Math.max(0, Math.min(1, ((x - xi) * dx + (y - yi) * dy) / len2)) : 0;
+        const d = Math.hypot(x - (xi + t * dx), y - (yi + t * dy));
+        if (d < best) best = d;
+    }
+    return pointInPolygon(poly, x, y) ? best : -best;
+}
 
 // Distance from a point to a pad's copper (0 when inside).
 function padDistance(px, py, p) {
@@ -335,7 +369,7 @@ const R_NBX = [1, -1, 0, 0];
 const R_NBY = [0, 0, 1, -1];
 
 function routeBoard(cfg) {
-    const { boardW, boardH, pads, holes, netOrder, netNames, layerCost, viaCost } = cfg;
+    const { boardW, boardH, pads, holes, netOrder, netNames, layerCost, viaCost, outline } = cfg;
     const CELL = R_CELL;
     const nx = Math.ceil(boardW / CELL) + 2;
     const ny = Math.ceil(boardH / CELL) + 2;
@@ -352,12 +386,13 @@ function routeBoard(cfg) {
     const cellX = (c) => (c % nx) * CELL;
     const cellY = (c) => Math.floor(c / nx) * CELL;
 
-    /* --- board edge keep-out ------------------------------------------- */
+    /* --- board edge keep-out -------------------------------------------
+     * The outline is a polygon, so the keep-out is "within R_EDGE_MARGIN of it",
+     * not a rectangle test. Cells outside it are blocked outright. */
     for (let y = 0; y < ny; y++) {
         for (let x = 0; x < nx; x++) {
             const px = x * CELL, py = y * CELL;
-            if (px < R_EDGE_MARGIN || py < R_EDGE_MARGIN ||
-                px > boardW - R_EDGE_MARGIN || py > boardH - R_EDGE_MARGIN) {
+            if (outlineSignedDistance(outline, px, py) < R_EDGE_MARGIN) {
                 occ[0][y * nx + x] = R_BLOCK;
                 occ[1][y * nx + x] = R_BLOCK;
             }
@@ -707,19 +742,12 @@ function generateKiCadPCB(opts) {
         { id: 9, name: 'BAT_PLUS' }
     ];
 
-    const colOffset = side === 'left' ? 0 : 7;
+    const colOffset = side === 'left' ? 0 : 6;   // 6 left columns + 9 right = GH60's 15
     for (let c = 0; c < cols; c++) {
         nets.push({ id: nets.length, name: `COL${colOffset + c}` });
     }
 
-    let netEncA = null;
-    let netEncB = null;
-    if (side === 'left') {
-        netEncA = { id: nets.length, name: 'ENC_A' };
-        nets.push(netEncA);
-        netEncB = { id: nets.length, name: 'ENC_B' };
-        nets.push(netEncB);
-    }
+
 
     // Key definition matrix according to firmware dtsi (34 keys left, 42 keys right)
     // Left: 7 cols x 5 rows. Row 4 skips col 5 (Space_L is 2.25u). Total = 34 keys.
@@ -730,7 +758,7 @@ function generateKiCadPCB(opts) {
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
             if (side === 'left') {
-                if (r === 4 && c === 5) continue; // Skip omitted space position
+                if (r === 4 && c === 4) continue; // Skip omitted space position
                 activeKeys.push({ r, c });
             } else {
                 if (r === 2 && (c === 7 || c === 8)) continue; // Home row ends at Enter (7 keys)
@@ -786,8 +814,39 @@ function generateKiCadPCB(opts) {
         pcbContent += `  (net ${n.id} "${n.name}")\n`;
     }
 
-    // Board Outline
-    pcbContent += `  (gr_rect (start 0 0) (end ${boardW.toFixed(2)} ${boardH.toFixed(2)}) (layer "Edge.Cuts") (width 0.15) (fill none))\n`;
+    // Board Outline. The board is a stack of full-width bands, one per row plus the
+    // controller bay and the bottom margin, so the silhouette follows the key field
+    // instead of being a rectangle with 8mm of dead copper down one side of every
+    // row. The half that carries the seam keeps that edge straight - it is a joint
+    // face, not a silhouette - so only the outer edge, the top corners and the
+    // bottom step.
+    const outlineBands = [];
+    const seamRight = side === 'left';
+    // Outer edge of a row: the PCB overhangs that row's key cell by marginX, exactly
+    // as a rectangular board did, so the plate keeps its 8mm shelf on the outer side.
+    // The row at the extreme stagger is flush with the bay on either half.
+    const outerX = (r) => seamRight
+        ? ROW_STAGGER_U[r] * pitchX
+        : marginX + (ROW_STAGGER_U[r] + cols) * pitchX + marginX;
+    outlineBands.push({ y0: 0, y1: topBayHeight, x0: 0, x1: boardW });
+    // The keys start marginY below the bay, so the row bands do too.
+    const rowY0 = topBayHeight + marginY;
+    outlineBands.push({ y0: topBayHeight, y1: rowY0, x0: 0, x1: boardW });
+    for (let r = 0; r < rows; r++) {
+        outlineBands.push({
+            y0: rowY0 + r * pitchY, y1: rowY0 + (r + 1) * pitchY,
+            x0: seamRight ? outerX(r) : 0, x1: seamRight ? boardW : outerX(r)
+        });
+    }
+    const bottomX = outerX(rows - 1);
+    outlineBands.push({
+        y0: rowY0 + rows * pitchY, y1: boardH,
+        x0: seamRight ? bottomX : 0, x1: seamRight ? boardW : bottomX
+    });
+    // The outline is emitted after the footprints are placed, because the parts get a
+    // veto: a band whose edge would cut through a pad or a drilled hole is widened to
+    // clear it. That is what puts the small bulge at row 1 on the left half - the EC11
+    // body and its pads live in row 0's band and reach past row 1's step.
 
     // Geometry handed to the router. `rec` records copper pads, `hole` records
     // drilled mechanical holes; the router derives its own clearance model,
@@ -797,12 +856,14 @@ function generateKiCadPCB(opts) {
     const rec = (p) => { routerPads.push(p); };
     const hole = (x, y, r) => { routerHoles.push({ x, y, r }); };
 
-    // 4x M2 Mounting Holes (2.2mm drill, 4.0mm clearance pad)
+    // 4x M2 Mounting Holes (2.2mm drill, 4.0mm clearance pad). The two bottom ones
+    // follow the last row's outer edge, because the bottom band is narrower than the
+    // bay and the old corner positions are outside the board there.
     const mHoles = [
         [4.0, 4.0],
         [boardW - 4.0, 4.0],
-        [4.0, boardH - 4.0],
-        [boardW - 4.0, boardH - 4.0]
+        [seamRight ? bottomX + 4.0 : bottomX - 4.0, boardH - 4.0],
+        [seamRight ? boardW - 4.0 : 4.0, boardH - 4.0]
     ];
     for (const h of mHoles) {
         pcbContent += `  (footprint "MountingHole:MountingHole_2.2mm_M2" (layer "F.Cu")
@@ -823,8 +884,9 @@ function generateKiCadPCB(opts) {
 
     // Three 1mm fiducials on the assembly side (all SMT is on the bottom), placed
     // asymmetric so a mis-picked board origin shows up. JLCPCB assembly wants them.
-    // Net 0, so the router blocks their copper and keeps tracks clear.
-    [[12.0, boardH - 4.5], [boardW - 12.0, boardH - 4.5], [24.0, 5.0]].forEach((p, i) => {
+    // Net 0, so the router blocks their copper and keeps tracks clear. The third one
+    // sits in the narrowed bottom band, inboard of where the last row ends.
+    [[16.0, 6.0], [boardW - 16.0, 6.0], [seamRight ? bottomX + 20.0 : bottomX - 20.0, boardH - 5.0]].forEach((p, i) => {
         pcbContent += `  (footprint "Fiducial:Fiducial_1mm_Mask2mm" (layer "B.Cu")
     (at ${p[0].toFixed(2)} ${p[1].toFixed(2)})
     (attr exclude_from_pos_files)
@@ -859,17 +921,19 @@ function generateKiCadPCB(opts) {
         'RAW', 'GND', 'RST', 'VCC', 'D21', 'D20', 'D19', 'D18', 'D15', 'D14', 'D16', 'D10'
     ];
     // Mirrors the &pro_micro D-numbers in interlock_ergo_{left,right}.overlay:
-    // rows = pro_micro 4..8, battery on RAW, encoder on pro_micro 21/20 (left only).
+    // rows = pro_micro 4..8, columns on 18/15/14/16/10/1 (left) and 18/15/14/16/10/1/0/2/3
+    // (right), battery on RAW. No encoder: dropping the left function column took its
+    // home (RC(0,0)), so pro_micro 21/20 and D0 on the left are simply unused pads.
     const podSignals = side === 'left'
         ? {
-            D0: 'COL6', D1: 'COL5', D4: 'ROW0', D5: 'ROW1', D6: 'ROW2', D7: 'ROW3', D8: 'ROW4',
+            D1: 'COL5', D4: 'ROW0', D5: 'ROW1', D6: 'ROW2', D7: 'ROW3', D8: 'ROW4',
             D18: 'COL0', D15: 'COL1', D14: 'COL2', D16: 'COL3', D10: 'COL4',
-            D21: 'ENC_A', D20: 'ENC_B', RAW: 'RAW', GND: 'GND'
+            RAW: 'RAW', GND: 'GND'
         }
         : {
-            D0: 'COL13', D1: 'COL12', D2: 'COL14', D3: 'COL15', D4: 'ROW0', D5: 'ROW1',
-            D6: 'ROW2', D7: 'ROW3', D8: 'ROW4', D18: 'COL7', D15: 'COL8', D14: 'COL9',
-            D16: 'COL10', D10: 'COL11', RAW: 'RAW', GND: 'GND'
+            D0: 'COL12', D1: 'COL11', D2: 'COL13', D3: 'COL14', D4: 'ROW0', D5: 'ROW1',
+            D6: 'ROW2', D7: 'ROW3', D8: 'ROW4', D18: 'COL6', D15: 'COL7', D14: 'COL8',
+            D16: 'COL9', D10: 'COL10', RAW: 'RAW', GND: 'GND'
         };
     const mcuPadNets = PROMICRO_PAD_SIGNALS.map((d) => {
         const name = podSignals[d];
@@ -896,9 +960,6 @@ function generateKiCadPCB(opts) {
     for (const k of activeKeys) {
         const { r, c, diodeNet } = k;
         
-        // Skip switch footprint on Left Half at (0,0) if encoder is placed there
-        const isEncoderPos = (side === 'left' && r === 0 && c === 0);
-
         const rowNet = nets.find(n => n.name === `ROW${r}`);
         const colNet = nets.find(n => n.name === `COL${colOffset + c}`);
         const x = (offsetX + (ROW_STAGGER_U[r] + c) * pitchX).toFixed(2);
@@ -909,7 +970,7 @@ function generateKiCadPCB(opts) {
 
         let pad1X, pad1Y, pad2X, pad2Y;
 
-        if (!isEncoderPos) {
+        {
             // Switch + Kailh hotswap socket.
             //
             // Geometry verified against marbastlib's SW_choc_v1_HS_CPG135001S30_1u
@@ -988,21 +1049,6 @@ function generateKiCadPCB(opts) {
             // Connect Switch Pad 2 to Diode Pad 2 (Anode) on B.Cu
             rec({ ref: dRef, num: '1', x: parseFloat(dx) - 1.65, y: parseFloat(dy), net: rowNet.id, kind: 'rect', hw: 0.45, hh: 0.6, layers: [1] });
             rec({ ref: dRef, num: '2', x: parseFloat(dx) + 1.65, y: parseFloat(dy), net: diodeNet.id, kind: 'rect', hw: 0.45, hh: 0.6, layers: [1] });
-        } else {
-            // The encoder push switch occupies RC(0,0) and needs a series diode too,
-            // otherwise it shorts COL0 straight to ROW0 and ghosts column 0.
-            const dx = (parseFloat(x) - 4.5).toFixed(2);
-            const dy = (parseFloat(y) + 4.0).toFixed(2);
-            pcbContent += diodeFootprint(dRef, dx, dy, rowNet, diodeNet);
-
-            cplRows.push({
-                designator: dRef, midX: dx, midY: dy, layer: 'bottom', rotation: 0,
-                comment: '1N4148W', footprint: 'SOD-123', lcsc: 'C81598'
-            });
-
-            // Encoder pad S2 (-2.5,-7.0 relative) -> diode anode
-            rec({ ref: dRef, num: '1', x: parseFloat(dx) - 1.65, y: parseFloat(dy), net: rowNet.id, kind: 'rect', hw: 0.45, hh: 0.6, layers: [1] });
-            rec({ ref: dRef, num: '2', x: parseFloat(dx) + 1.65, y: parseFloat(dy), net: diodeNet.id, kind: 'rect', hw: 0.45, hh: 0.6, layers: [1] });
         }
     }
 
@@ -1030,38 +1076,6 @@ function generateKiCadPCB(opts) {
         rec({ ref: 'U1', num: String(p + 13), x: parseFloat(mcuX) + 7.62, y: mcuY - 13.97 + p * 2.54, net: rNet.id, kind: 'circle', hw: 0.85, hh: 0.85, layers: [0, 1], drill: 0.5 });
     }
     pcbContent += `  )\n`;
-
-    // Rotary Encoder on Left Half - Alps EC11E with push switch.
-    // Pad geometry from marbastlib's ROT_Alps_EC11E-Switch: A/B/C at y=+7.5 on
-    // 2.5mm pitch, the push switch at y=-7, and two 2.8 x 1.5mm slotted mounting
-    // posts at x=+/-5.6. The mounting posts are structural - without them the
-    // encoder body stands on its own legs and never seats on the board.
-    if (side === 'left') {
-        const encX = offsetX.toFixed(2);
-        const encY = offsetY.toFixed(2);
-        const col0Net = nets.find(n => n.name === 'COL0');
-        const encKeyNet = activeKeys.find(k => k.r === 0 && k.c === 0).diodeNet;
-        pcbContent += `  (footprint "RotaryEncoder_Alps_EC11" (layer "F.Cu")
-    (at ${encX} ${encY})
-    (fp_text reference "ENC1" (at 0 -10.5) (layer "F.SilkS"))
-    (pad "A" thru_hole circle (at -2.5 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${netEncA.id} "${netEncA.name}"))
-    (pad "C" thru_hole circle (at 0 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net 1 "GND"))
-    (pad "B" thru_hole circle (at 2.5 7.5) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${netEncB.id} "${netEncB.name}"))
-    (pad "" np_thru_hole oval (at -5.6 0) (size 2.8 1.5) (drill oval 2.8 1.5) (layers *.Cu *.Mask))
-    (pad "" np_thru_hole oval (at 5.6 0) (size 2.8 1.5) (drill oval 2.8 1.5) (layers *.Cu *.Mask))
-    (pad "S1" thru_hole circle (at -2.5 -7.0) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${col0Net.id} "${col0Net.name}"))
-    (pad "S2" thru_hole circle (at 2.5 -7.0) (size 2 2) (drill 1.0) (layers *.Cu *.Mask) (net ${encKeyNet.id} "${encKeyNet.name}"))
-  )\n`;
-        const efx = parseFloat(encX), efy = parseFloat(encY);
-        rec({ ref: 'ENC1', num: 'A', x: efx - 2.5, y: efy + 7.5, net: netEncA.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
-        rec({ ref: 'ENC1', num: 'C', x: efx, y: efy + 7.5, net: 1, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
-        rec({ ref: 'ENC1', num: 'B', x: efx + 2.5, y: efy + 7.5, net: netEncB.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
-        rec({ ref: 'ENC1', num: 'S1', x: efx - 2.5, y: efy - 7.0, net: col0Net.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
-        rec({ ref: 'ENC1', num: 'S2', x: efx + 2.5, y: efy - 7.0, net: encKeyNet.id, kind: 'circle', hw: 1.0, hh: 1.0, layers: [0, 1], drill: 0.5 });
-        // Mounting posts: blocked on both layers, radius taken from the slot's long axis.
-        hole(efx - 5.6, efy, 1.4);
-        hole(efx + 5.6, efy, 1.4);
-    }
 
     // Power Switch (MSK-12D19) in the top bay, on the outer edge of the board
     pcbContent += `  (footprint "SlideSwitch_MSK12D19" (layer "F.Cu")
@@ -1101,9 +1115,26 @@ function generateKiCadPCB(opts) {
     for (const k of activeKeys) netOrder.push(k.diodeNet.id);
     for (let r = 0; r < rows; r++) netOrder.push(nets.find(n => n.name === `ROW${r}`).id);
     for (let c = 0; c < cols; c++) netOrder.push(nets.find(n => n.name === `COL${colOffset + c}`).id);
-    if (netEncA) netOrder.push(netEncA.id);
-    if (netEncB) netOrder.push(netEncB.id);
     netOrder.push(9, 3, 1); // BAT_PLUS, RAW, GND
+
+    // Parts get a veto on the silhouette: widen any band whose edge would come within
+    // KiCad's 0.5mm copper-to-edge rule of a pad or a hole, then trace the boundary.
+    for (const band of outlineBands) {
+        for (const p of routerPads) {
+            if (p.y + p.hh < band.y0 - 1e-9 || p.y - p.hh > band.y1 + 1e-9) continue;
+            if (seamRight) band.x0 = Math.min(band.x0, p.x - p.hw - R_EDGE_CLEAR_CU);
+            else band.x1 = Math.max(band.x1, p.x + p.hw + R_EDGE_CLEAR_CU);
+        }
+        for (const h of routerHoles) {
+            if (h.y + h.r < band.y0 - 1e-9 || h.y - h.r > band.y1 + 1e-9) continue;
+            if (seamRight) band.x0 = Math.min(band.x0, h.x - h.r - R_EDGE_CLEAR_CU);
+            else band.x1 = Math.max(band.x1, h.x + h.r + R_EDGE_CLEAR_CU);
+        }
+    }
+    const outline = bandsToPolygon(outlineBands);
+    pcbContent += `  (gr_poly (pts ${outline.map(([x, y]) => `(xy ${x.toFixed(2)} ${y.toFixed(2)})`).join(' ')})
+    (layer "Edge.Cuts") (width 0.15) (fill none))
+`;
 
     const ROUTE_ATTEMPTS = [
         { f: 1.20, via: 12 },
@@ -1115,7 +1146,7 @@ function generateKiCadPCB(opts) {
     const t0 = Date.now();
     for (let a = 0; a < ROUTE_ATTEMPTS.length; a++) {
         routed = routeBoard({
-            boardW, boardH,
+            boardW, boardH, outline,
             pads: routerPads,
             holes: routerHoles,
             netOrder,
@@ -1251,7 +1282,7 @@ function generateKiCadPCB(opts) {
 generateKiCadPCB({
     variant: 'choc',
     side: 'left',
-    cols: 7,
+    cols: 6,
     rows: 5,
     pitchX: 18.0,
     pitchY: 17.0,
@@ -1272,7 +1303,7 @@ generateKiCadPCB({
 generateKiCadPCB({
     variant: 'mx',
     side: 'left',
-    cols: 7,
+    cols: 6,
     rows: 5,
     pitchX: 19.05,
     pitchY: 19.05,

@@ -10,22 +10,23 @@ const shieldDir = path.join(rootDir, 'config/boards/shields/interlock_ergo');
 // 1. Verify dtsi & unique RC mapping
 const dtsiContent = fs.readFileSync(path.join(shieldDir, 'interlock_ergo.dtsi'), 'utf8');
 const rcMatches = dtsiContent.match(/RC\(\s*\d+\s*,\s*\d+\s*\)/g);
+const mapRCs = [...rcMatches].map((rc) => rc.replace(/[^\d,]/g, ''));
 assert(rcMatches, 'Failed to find RC entries in dtsi');
 const totalMatrixKeys = rcMatches.length;
 
 // Check for duplicate RC coordinates
 const uniqueRCs = new Set(rcMatches.map(rc => rc.replace(/\s+/g, '')));
 assert.strictEqual(uniqueRCs.size, rcMatches.length, `Duplicate RC coordinate found in dtsi! (${uniqueRCs.size} unique vs ${rcMatches.length} total)`);
-assert.strictEqual(totalMatrixKeys, 76, `Expected exactly 76 keys in dtsi, got ${totalMatrixKeys}`);
+assert.strictEqual(totalMatrixKeys, 71, `Expected exactly 71 keys in dtsi, got ${totalMatrixKeys}`);
 console.log(`Found ${totalMatrixKeys} unique matrix positions in default_transform.`);
 
 // 2. Verify Right Overlay has col-offset on &default_transform (NOT in kscan0)
 const rightOverlay = fs.readFileSync(path.join(shieldDir, 'interlock_ergo_right.overlay'), 'utf8');
-assert(!rightOverlay.includes('col-offset = <7>;\n        row-gpios') && !rightOverlay.match(/kscan0[\s\S]*?col-offset/),
+assert(!rightOverlay.includes('col-offset = <6>;\n        row-gpios') && !rightOverlay.match(/kscan0[\s\S]*?col-offset/),
     'CRITICAL: col-offset MUST NOT be placed inside kscan0 (it is a matrix-transform property)');
-assert(rightOverlay.match(/&default_transform\s*\{[\s\S]*?col-offset\s*=\s*<7>;/),
-    'CRITICAL: col-offset = <7> must be assigned to &default_transform');
-console.log('✓ Verified col-offset = <7> is correctly attached to &default_transform.');
+assert(rightOverlay.match(/&default_transform\s*\{[\s\S]*?col-offset\s*=\s*<6>;/),
+    'CRITICAL: col-offset = <6> must be assigned to &default_transform');
+console.log('✓ Verified col-offset = <6> is correctly attached to &default_transform.');
 
 // 3. Verify Kconfig.defconfig enables CONFIG_ZMK_SPLIT
 const defconfig = fs.readFileSync(path.join(shieldDir, 'Kconfig.defconfig'), 'utf8');
@@ -75,25 +76,24 @@ while ((match = layerRegex.exec(keymapContent)) !== null) {
         `Layer ${layerName} has ${tokens.length} keys, expected ${totalMatrixKeys}`);
 
     if (layerName === 'default_layer') {
-        const key6 = tokens[7];
-        const keyY = tokens[23];
-        const keyH = tokens[39];
-        const keyN = tokens[53];
+        // Indices come from the transform, not from a hand-counted constant: the
+        // bindings are in map order, so the Nth RC(r,c) is the Nth token. Hardcoding
+        // these went stale the moment a column moved.
+        const idx = (r, c) => mapRCs.indexOf(`${r},${c}`);
+        const at = (r, c) => tokens[idx(r, c)];
+        const seam = 5;   // last column of the left half; 6 is the first of the right
 
-        assert(key6.includes('N6'), `Expected &kp N6 at right col 7, got ${key6}`);
-        assert(keyY.includes('Y'), `Expected &kp Y at right col 7, got ${keyY}`);
-        assert(keyH.includes('H'), `Expected &kp H at right col 7, got ${keyH}`);
-        assert(keyN.includes('N'), `Expected &kp N at right col 7, got ${keyN}`);
+        // The 6/Y/H/N column must be on the right half, and the left half must end
+        // at 5/T/G/B - that split is ANSI's, not an accident of the wiring.
+        assert(at(0, seam + 1).includes('N6'), `Expected &kp N6 at the first right column, got ${at(0, seam + 1)}`);
+        assert(at(1, seam + 1).includes('Y'), `Expected &kp Y at the first right column, got ${at(1, seam + 1)}`);
+        assert(at(2, seam + 1).includes('H'), `Expected &kp H at the first right column, got ${at(2, seam + 1)}`);
+        assert(at(3, seam + 1).includes('N'), `Expected &kp N at the first right column, got ${at(3, seam + 1)}`);
 
-        const key5 = tokens[6];
-        const keyT = tokens[22];
-        const keyG = tokens[38];
-        const keyB = tokens[52];
-
-        assert(key5.includes('N5'), `Expected &kp N5 at left col 6, got ${key5}`);
-        assert(keyT.includes('T'), `Expected &kp T at left col 6, got ${keyT}`);
-        assert(keyG.includes('G'), `Expected &kp G at left col 6, got ${keyG}`);
-        assert(keyB.includes('B'), `Expected &kp B at left col 6, got ${keyB}`);
+        assert(at(0, seam).includes('N5'), `Expected &kp N5 at the last left column, got ${at(0, seam)}`);
+        assert(at(1, seam).includes('T'), `Expected &kp T at the last left column, got ${at(1, seam)}`);
+        assert(at(2, seam).includes('G'), `Expected &kp G at the last left column, got ${at(2, seam)}`);
+        assert(at(3, seam).includes('B'), `Expected &kp B at the last left column, got ${at(3, seam)}`);
     }
 }
 assert(layerCount >= 3, 'Expected at least 3 layers in keymap');

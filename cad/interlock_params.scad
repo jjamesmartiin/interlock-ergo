@@ -24,7 +24,9 @@ floor_thickness = 2.4;
 standoff_h      = 5.5;   // floor top -> PCB underside; must clear the cell below it
 wall_thickness  = 4.0;   // outer side walls
 seam_wall       = 6.0;   // thicker: it has to carry the dovetail socket
-fillet_r        = 3.0;
+fillet_r        = 3.0;   // corner radius of the layout diagram
+case_fillet     = 1.5;   // outer corner radius of the case; must stay under half the
+                         // 4.5mm stagger step or the closing offset erases the steps
 pcb_clearance   = 0.6;   // total X/Y slop around the PCB (0.3 per side)
 
 // Cell: a protected LP402030 pouch. The cell is 4.0 x 20 x 30 mm but the PCM
@@ -67,7 +69,7 @@ stagger_max_u = 1.25;
 pcb_margin_x  = 8.0;    // PCB edge margin around the key field
 pcb_margin_y  = 8.0;
 pcb_top_bay   = 28.0;   // controller bay at the top of the PCB
-cols_left     = 7;
+cols_left     = 6;   // + 9 on the right = GH60's 15u; no function column
 cols_right    = 9;
 rows          = 5;
 
@@ -75,6 +77,72 @@ function pcb_w(cols, pitch_x) = cols * pitch_x + 2 * pcb_margin_x + stagger_max_
 function pcb_l(pitch_y)       = rows * pitch_y + 2 * pcb_margin_y + pcb_top_bay;
 function plate_w(cols, pitch_x) = cols * pitch_x + stagger_max_u * pitch_x;
 function plate_l(pitch_y)       = rows * pitch_y;
+
+// ------------------------------------------------------- silhouette (PCB)
+//
+// The board is a stack of full-width horizontal bands: the controller bay, one band
+// per key row, the bottom margin. The outer edge of each band sits pcb_margin_x
+// outside that row's outermost key, so the silhouette steps with the stagger instead
+// of being a rectangle with dead copper down one side of every row. The seam face is
+// left straight - it is a joint, not a silhouette - which is why only the outer edge,
+// the bay corners and the bottom step.
+//
+// pcb/generate_pcb.js builds the same stack; tests/test_alignment.js compares the two.
+function row_edge_x(r, cols, pitch_x, seam_right) = seam_right
+    ? row_stagger_u[r] * pitch_x
+    : pcb_margin_x + (row_stagger_u[r] + cols) * pitch_x + pcb_margin_x;
+function key_field_left_x(r, pitch_x)  = pcb_margin_x + row_stagger_u[r] * pitch_x;
+function key_field_right_x(r, cols, pitch_x) = pcb_margin_x + (row_stagger_u[r] + cols) * pitch_x;
+
+// Band = [y0, y1, x0, x1], PCB-local, top to bottom.
+function outline_bands(cols, pitch_x, pitch_y, seam_right) =
+    let (w = pcb_w(cols, pitch_x), h = pcb_l(pitch_y),
+         y0 = pcb_top_bay + pcb_margin_y, yb = y0 + rows * pitch_y,
+         e = [for (r = [0 : rows - 1]) row_edge_x(r, cols, pitch_x, seam_right)])
+    concat(
+        [[0, pcb_top_bay, 0, w], [pcb_top_bay, y0, 0, w]],
+        [for (r = [0 : rows - 1]) [
+            y0 + r * pitch_y, y0 + (r + 1) * pitch_y,
+            seam_right ? e[r] : 0,
+            seam_right ? w : e[r]
+        ]],
+        [[yb, h, seam_right ? e[rows - 1] : 0, seam_right ? w : e[rows - 1]]]
+    );
+
+// The plate is the key field, inset from the PCB edge by pcb_margin_x on the outer
+// side (that inset is the shelf it rests on) and reaching the field's most extreme
+// key on the seam side, so the rim along the joint stays one width.
+function plate_bands(cols, pitch_x, pitch_y, seam_right) =
+    let (y0 = pcb_top_bay + pcb_margin_y,
+         inner = seam_right
+            ? max([for (r = [0 : rows - 1]) key_field_right_x(r, cols, pitch_x)])
+            : min([for (r = [0 : rows - 1]) key_field_left_x(r, pitch_x)]))
+    [for (r = [0 : rows - 1]) [
+        y0 + r * pitch_y, y0 + (r + 1) * pitch_y,
+        seam_right ? key_field_left_x(r, pitch_x) : inner,
+        seam_right ? inner : key_field_right_x(r, cols, pitch_x)
+    ]];
+
+// Grow a band stack: `out` on the outer/top/bottom edges, `seam` on the seam edge.
+function grow_bands(bands, seam_right, out, seam) =
+    [for (b = bands) [
+        b[0] - out, b[1] + out,
+        seam_right ? b[2] - out : b[2] - seam,
+        seam_right ? b[3] + seam : b[3] + out
+    ]];
+
+// The M2 mounting holes, in PCB-local coordinates. The two at the bottom follow the
+// last row's outer edge, because the bottom band is narrower than the bay.
+function mounting_holes(cols, pitch_x, pitch_y, seam_right) =
+    let (w = pcb_w(cols, pitch_x), h = pcb_l(pitch_y),
+         be = row_edge_x(rows - 1, cols, pitch_x, seam_right))
+    [[4, 4], [w - 4, 4],
+     [seam_right ? be + 4 : be - 4, h - 4],
+     [seam_right ? w - 4 : 4, h - 4]];
+
+module bands_2d(bands) {
+    union() for (b = bands) translate([b[2], b[0]]) square([b[3] - b[2], b[1] - b[0]]);
+}
 
 // The plate sits this far inside the cavity. Must match the PCB switch grid:
 // PCB switch (row 0, col 0) is at (pcb_margin_x + pitch_x/2, pcb_top_bay + pcb_margin_y + pitch_y/2)

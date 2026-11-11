@@ -47,13 +47,13 @@ will have two halves that push each other apart.
 
 The switch sockets and the diodes go on the **bottom** of the PCB, opposite the
 switch side. Both are in the board's JLCPCB BOM/CPL (`pcb/dist/bom_*.csv`,
-`cpl_*.csv`), so the assembler can place all 76 of each; the three 1 mm fiducials
+`cpl_*.csv`), so the assembler can place all 71 of each; the three 1 mm fiducials
 the placement needs are on that side too, in `pcb/dist/gerbers_*/`.
 
 1. Diodes first: 1N4148W in SOD-123, cathode (the banded end) toward the row net.
    The diode sits up-and-left of each switch, on the same side as the sockets.
-   The silkscreen marks `D1..Dn` and the PCB generator emits one diode per key,
-   plus one for the encoder's push switch.
+   The silkscreen marks `D1..Dn` and the PCB generator emits exactly one diode per
+   key.
 2. Hotswap sockets next. Each switch footprint has two 2.6 mm round-rectangle SMD
    pads sitting **about 3.3 mm outboard of the switch pins**, and a 3.0 mm
    unplated hole at each pin. That is what a Kailh hotswap socket actually needs:
@@ -78,7 +78,6 @@ Do not fit the plate yet.
 2. Put a switch into each socket in turn - or use tweezers to short each switch's
    two pads - and confirm every key produces the character in the picture in
    `docs/images/layout.svg`.
-3. Check the encoder in both directions and on the push.
 4. Check the power switch actually disconnects the cell (measure the current with
    the switch off; it should read microamps).
 
@@ -170,10 +169,6 @@ that is exactly why the dry fit comes before the PCB order.
   part is a clone with a taller body it may foul nothing but will stand proud; if
   it is shorter you may not reach it. Pin pitch is unverified - check it against
   the PCB before soldering.
-- **Encoder.** The board has the two 2.8 x 1.5 mm mounting-post slots the EC11
-  stands on. The plate clears a 13.5 mm square for a 12.0 x 12.2 mm body. If your
-  encoder is a taller variant it may foul the plate: the body height is the one
-  EC11 dimension that could not be verified.
 - **Controller height.** The controller bay is open at the top, so a socketed
   nice!nano with headers fits; a castellated one sits lower. The bay is 2 mm short
   of the plate so a 33.02 mm nice!nano clears it.
@@ -192,8 +187,6 @@ that is exactly why the dry fit comes before the PCB order.
   bay (that bay is open anyway) - that is a slot, not a printing defect. A cable
   whose overmold is thicker than ~6.5 mm may still stop a little short: test with
   the cable you intend to use.
-- **Encoder knob diameter.** Maximum 16-17 mm. Anything >= 18 mm collides with the
-  adjacent Esc keycap.
 - **Spacebar keycap size.** Left half row 4 uses a 1u switch for Space. Do not buy
   a 2u or 2.25u keycap - its centre stem collides with Alt. A 1u gap remains
   between Space and Fn1.

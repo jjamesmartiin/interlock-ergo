@@ -54,6 +54,15 @@ function parseDrillFile(file) {
     return [...tools.values()];
 }
 
+function pointInPolygon(poly, x, y) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
+        if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+}
+
 const rows = [];
 let missing = 0;
 
@@ -67,12 +76,35 @@ for (const b of BOARDS) {
     }
     const text = fs.readFileSync(boardFile, 'utf8');
 
-    // Board outline -> area, and how many of it fit in the order budget.
-    const rect = text.match(/\(gr_rect \(start (-?[\d.]+) (-?[\d.]+)\) \(end (-?[\d.]+) (-?[\d.]+)\) \(layer "Edge\.Cuts"\)/);
-    assert(rect, `${b.name}: no closed Edge.Cuts rectangle`);
-    const w = Math.abs(+rect[3] - +rect[1]);
-    const h = Math.abs(+rect[4] - +rect[2]);
-    const areaCm2 = (w * h) / 100;
+    // Board outline -> area, and how many of it fit in the order budget. The outline
+    // is a stepped polygon (the silhouette follows the key rows), so this is a shoelace
+    // sum over Edge.Cuts rather than a rectangle.
+    const polyM = text.match(/\(gr_poly \(pts ((?:\(xy [-\d.]+ [-\d.]+\) ?)+)\)/);
+    assert(polyM, `${b.name}: no closed Edge.Cuts polygon`);
+    const poly = [...polyM[1].matchAll(/\(xy ([-\d.]+) ([-\d.]+)\)/g)].map((m) => [+m[1], +m[2]]);
+    assert(poly.length >= 6, `${b.name}: Edge.Cuts polygon has only ${poly.length} points`);
+    let twiceArea = 0;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        twiceArea += poly[j][0] * poly[i][1] - poly[i][0] * poly[j][1];
+    }
+    const areaCm2 = Math.abs(twiceArea / 2) / 100;
+    const xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]);
+    const w = Math.max(...xs) - Math.min(...xs);
+    const h = Math.max(...ys) - Math.min(...ys);
+
+    // A mounting hole that fell outside the stepped silhouette would be a drill in
+    // thin air - the bottom holes moved when the outline stopped being a rectangle.
+    const mountHoles = [...text.matchAll(/MountingHole_2\.2mm_M2" \(layer "F\.Cu"\)\s*\n\s*\(at ([-\d.]+) ([-\d.]+)/g)]
+        .map((m) => [parseFloat(m[1]), parseFloat(m[2])]);
+    assert.strictEqual(mountHoles.length, 4, `${b.name}: ${mountHoles.length} mounting holes, expected 4`);
+    for (const [hx, hy] of mountHoles) {
+        for (let a = 0; a < 8; a++) {
+            const r = 1.6;   // hole radius + the 0.5mm edge rule
+            const ang = (a * Math.PI) / 4;
+            assert(pointInPolygon(poly, hx + r * Math.cos(ang), hy + r * Math.sin(ang)),
+                `${b.name}: mounting hole at (${hx}, ${hy}) is too close to the board edge`);
+        }
+    }
 
     // Copper track widths (Edge.Cuts/Silk use the same property, so filter by layer).
     const widths = [...text.matchAll(/\(segment \(start [^)]*\) \(end [^)]*\) \(width ([\d.]+)\) \(layer "([FB]\.Cu)"\)/g)]

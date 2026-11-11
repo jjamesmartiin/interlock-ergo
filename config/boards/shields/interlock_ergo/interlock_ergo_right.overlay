@@ -1,7 +1,7 @@
 #include "interlock_ergo.dtsi"
 
 &default_transform {
-    col-offset = <7>;
+    col-offset = <6>;
 };
 
 / {

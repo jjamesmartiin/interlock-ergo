@@ -6,7 +6,9 @@ Ground truth mapping verified against ZMK's Pro Micro devicetree definitions (`a
 
 ## Left Half Pinout (Nice!Nano v2 / Pro Micro Footprint)
 
-The left half hosts a 5-row × 7-column matrix plus an EC11 rotary encoder.
+The left half hosts a 5-row × 6-column matrix. There is no rotary encoder and no
+function column: 6 + 9 columns across the two halves make GH60's 15 u, which is what
+puts `1`/`Q`/`A`/`Z` on GH60's own x.
 
 ### Row GPIOs (Col2Row, Active High / Pull-Down):
 - **Row 0:** `&pro_micro 4` -> `P0.22`
@@ -16,19 +18,15 @@ The left half hosts a 5-row × 7-column matrix plus an EC11 rotary encoder.
 - **Row 4:** `&pro_micro 8` -> `P1.04`
 
 ### Column GPIOs (Active High Drive):
-- **Col 0:** `&pro_micro 18` -> `P1.15` — Encoder push (row 0, `RC(0,0)`), then Mute / Play / PrtSc / Calc / Fn2 down the column. The encoder push switch and the row-0 key share one matrix position, so the PCB emits a series diode for it and no switch socket.
-- **Col 1:** `&pro_micro 15` -> `P1.13` — Esc, Tab, Caps, LShift, LCtrl
-- **Col 2:** `&pro_micro 14` -> `P1.11` — 1, Q, A, Z, LGui
-- **Col 3:** `&pro_micro 16` -> `P0.10` — 2, W, S, X, LAlt
-- **Col 4:** `&pro_micro 10` -> `P0.09` — 3, E, D, C, Space_L
-- **Col 5:** `&pro_micro 1`  -> `P0.06` — 4, R, F, V
-- **Col 6:** `&pro_micro 0`  -> `P0.08` — 5, T, G, B, Fn/Mo(1)
+- **Col 0:** `&pro_micro 18` -> `P1.15` — Esc, Tab, Caps, LShift, LCtrl
+- **Col 1:** `&pro_micro 15` -> `P1.13` — 1, Q, A, Z, LGui
+- **Col 2:** `&pro_micro 14` -> `P1.11` — 2, W, S, X, LAlt
+- **Col 3:** `&pro_micro 16` -> `P0.10` — 3, E, D, C, Space_L
+- **Col 4:** `&pro_micro 10` -> `P0.09` — 4, R, F, V (no bottom-row key)
+- **Col 5:** `&pro_micro 1`  -> `P0.06` — 5, T, G, B, Fn/Mo(1)
 
-### Rotary Encoder Pins:
-- **Pin A (Channel A):** `&pro_micro 21` -> `P0.31` (Internal pull-up)
-- **Pin B (Channel B):** `&pro_micro 20` -> `P0.29` (Internal pull-up)
-- **Common Pin (C):** `GND`
-- **Push Button:** Wired to Row 0, Column 0 in the switch matrix.
+Unused on the left: `&pro_micro 0` (the freed column pin), `21` and `20` (the
+encoder's A/B pins). Their pads exist on the PCB with no net.
 
 ---
 
@@ -43,16 +41,16 @@ The right half hosts a 5-row × 9-column matrix.
 - **Row 3:** `&pro_micro 7` -> `P0.11`
 - **Row 4:** `&pro_micro 8` -> `P1.04`
 
-### Column GPIOs (Col Offset 7 assigned via `&default_transform`):
-- **Col 7:**  `&pro_micro 18` -> `P1.15` — **6, Y, H, N, Space_R** (the 6YHN column; all five rows are populated)
-- **Col 8:**  `&pro_micro 15` -> `P1.13` — 7, U, J, M, RAlt
-- **Col 9:**  `&pro_micro 14` -> `P1.11` — 8, I, K, Comma, Mo(2)
-- **Col 10:** `&pro_micro 16` -> `P0.10` — 9, O, L, Dot, RCtrl
-- **Col 11:** `&pro_micro 10` -> `P0.09` — 0, P, Semicolon, Slash, Left Arrow
-- **Col 12:** `&pro_micro 1`  -> `P0.06` — Minus, [, Quote, RShift, Down Arrow
-- **Col 13:** `&pro_micro 0`  -> `P0.08` — Equal, ], Enter, Up Arrow, Right Arrow
-- **Col 14:** `&pro_micro 2`  -> `P0.17` — Bksp, Backslash, Delete, PgDn (no home-row key)
-- **Col 15:** `&pro_micro 3`  -> `P0.20` — Home, End, PgUp (no home-row or bottom-row key)
+### Column GPIOs (Col Offset 6 assigned via `&default_transform`):
+- **Col 6:**  `&pro_micro 18` -> `P1.15` — **6, Y, H, N, Space_R** (the 6YHN column; all five rows are populated)
+- **Col 7:**  `&pro_micro 15` -> `P1.13` — 7, U, J, M, RAlt
+- **Col 8:**  `&pro_micro 14` -> `P1.11` — 8, I, K, Comma, Mo(2)
+- **Col 9:** `&pro_micro 16` -> `P0.10` — 9, O, L, Dot, RCtrl
+- **Col 10:** `&pro_micro 10` -> `P0.09` — 0, P, Semicolon, Slash, Left Arrow
+- **Col 11:** `&pro_micro 1`  -> `P0.06` — Minus, [, Quote, RShift, Down Arrow
+- **Col 12:** `&pro_micro 0`  -> `P0.08` — Equal, ], Enter, Up Arrow, Right Arrow
+- **Col 13:** `&pro_micro 2`  -> `P0.17` — Bksp, Backslash, Delete, PgDn (no home-row key)
+- **Col 14:** `&pro_micro 3`  -> `P0.20` — Home, End, PgUp (no home-row or bottom-row key)
 
 ---
 

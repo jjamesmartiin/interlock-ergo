@@ -36,12 +36,22 @@ module half_case(half) {
     case_l  = 2 * wall_thickness + pl + pcb_clearance;
     cav_x   = wall_l + pcb_clearance / 2;
     cav_y   = wall_thickness + pcb_clearance / 2;
-    cav_w   = pw + pcb_clearance;
-    cav_l   = pl + pcb_clearance;
 
-    plate_x = cav_x + plate_off_x;
     plate_y = cav_y + plate_off_y;
     ledge_z = case_d - plate_t;
+
+    // One band stack defines the PCB, the cavity, the walls and the plate rebate; the
+    // PCB, the plate and the case can therefore not drift apart. See interlock_params.
+    pcb_b    = outline_bands(ncols, pitch_x, pitch_y, seam_on_right);
+    // Walls: the outer face sits wall_thickness outside the PCB, the seam face
+    // seam_wall outside it. The fillet below rounds convex corners without changing
+    // that size (offset out then in), so no compensation is needed here.
+    case_b   = grow_bands(pcb_b, seam_on_right,
+                          wall_thickness + pcb_clearance / 2,
+                          seam_wall + pcb_clearance / 2);
+    cav_b    = grow_bands(pcb_b, seam_on_right, pcb_clearance / 2, pcb_clearance / 2);
+    rebate_b = grow_bands(plate_bands(ncols, pitch_x, pitch_y, seam_on_right),
+                          seam_on_right, 0.25, 0.25);
 
     // (no `out_x`: the power switch is reached from above, through the open bay)
 
@@ -54,13 +64,9 @@ module half_case(half) {
     bat_x = cav_x + pw / 2 - battery_l / 2;
     bat_y = cav_y + (pcb_top_bay - battery_w) / 2;
 
-    // Standoff bosses line up with the PCB's four 2.2mm mounting holes at 4mm inset.
-    boss_pts = [
-        [cav_x + 4, cav_y + 4],
-        [cav_x + pw - 4, cav_y + 4],
-        [cav_x + 4, cav_y + pl - 4],
-        [cav_x + pw - 4, cav_y + pl - 4]
-    ];
+    // Standoff bosses line up with the PCB's four mounting holes.
+    boss_pts = [for (hp = mounting_holes(ncols, pitch_x, pitch_y, seam_on_right))
+                    [cav_x + hp[0], cav_y + hp[1]]];
 
     // Body and tabs first, then every cut, then the bosses: the bosses live inside
     // the cavity, so they have to be added back after the cavity is removed. They
@@ -69,7 +75,12 @@ module half_case(half) {
     union() {
         difference() {
             union() {
-                rounded_box(case_w, case_l, case_d, fillet_r);
+                // Offset in then out rounds every convex corner without changing the
+                // outer size, which is what keeps the stepped silhouette printable.
+                translate([cav_x, cav_y, 0])
+                    linear_extrude(height = case_d)
+                        offset(r = case_fillet) offset(delta = -case_fillet)
+                            bands_2d(case_b);
                 // Dovetail tabs hang off the seam face of the left half only.
                 if (seam_on_right) {
                     for (f = tab_y_frac)
@@ -79,18 +90,18 @@ module half_case(half) {
 
             // Electronics cavity, up to the underside of the plate.
             translate([cav_x, cav_y, floor_thickness - 0.01])
-                cube([cav_w, cav_l, ledge_z - floor_thickness + 0.01]);
+                linear_extrude(height = ledge_z - floor_thickness + 0.01) bands_2d(cav_b);
 
             // Plate rebate: the plate drops in so its top is flush with the rim.
-            translate([plate_x - 0.25, plate_y - 0.25, ledge_z])
-                cube([plate_pw + 0.5, plate_pl + 0.5, plate_t + 1]);
+            translate([cav_x, cav_y, ledge_z])
+                linear_extrude(height = plate_t + 1) bands_2d(rebate_b);
 
             // Controller bay stays open: the nice!nano, its reset button and the power
             // switch are only reachable from the top. A 2mm ledge is left above the
             // plate: the bay has to be at least 33.02mm deep (nice!nano length) plus
             // the 8mm PCB margin, which a 3mm ledge did not leave room for.
-            translate([cav_x, cav_y, ledge_z])
-                cube([cav_w, plate_y - 2.0 - cav_y, case_d - ledge_z + 1]);
+            translate([-10, -10, ledge_z])
+                cube([case_w + 20, plate_y - 2.0 + 10, case_d - ledge_z + 1]);
 
             // USB-C window: the through-cut has to reach past the outer face (the
             // old one started 1.3mm inside it and left a membrane over the port),

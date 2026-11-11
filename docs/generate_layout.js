@@ -70,11 +70,11 @@ const tokens = bindingBlock.match(/&[a-z0-9_]+(?:\s+[A-Z0-9_]+)*/gi) || [];
 // The two halves are not the same shape: row 2 of the right half and row 4 of both
 // halves are one or two keys short. These counts are the same ones the keymap and
 // the matrix transform use.
-const LEFT_COLS = 7;
+const LEFT_COLS = 6;
 const RIGHT_COLS = 9;
 const rows = [];
 let t = 0;
-const leftRowLen = [7, 7, 7, 7, 6];       // left bottom row skips one position
+const leftRowLen = [6, 6, 6, 6, 5];       // left bottom row skips one position
 const rightRowLen = [9, 9, 7, 9, 8];      // right home row ends at Enter, bottom at PgDn
 for (let r = 0; r < 5; r++) {
     const left = tokens.slice(t, t + leftRowLen[r]); t += leftRowLen[r];
@@ -95,6 +95,45 @@ const caseL = (p) => 2 * C.wall_thickness + pcbL(p) + C.pcb_clearance;
 const cavX = C.wall_thickness + C.pcb_clearance / 2;
 const cavY = C.wall_thickness + C.pcb_clearance / 2;
 
+// The silhouette is a stack of full-width bands, the same one the PCB, the plate and
+// the case are built from. Drawn as one traced polygon so the diagram cannot claim a
+// rectangular case.
+const rowEdge = (r, cols, p, seamRight) => seamRight
+    ? stagger[r] * p.pitchX
+    : C.pcb_margin_x + (stagger[r] + cols) * p.pitchX + C.pcb_margin_x;
+function outlineBands(cols, p, seamRight) {
+    const w = pcbW(cols, p);
+    const h = pcbL(p);
+    const y0 = C.pcb_top_bay + C.pcb_margin_y;
+    const bands = [[0, C.pcb_top_bay, 0, w], [C.pcb_top_bay, y0, 0, w]];
+    for (let r = 0; r < 5; r++) {
+        const e = rowEdge(r, cols, p, seamRight);
+        bands.push([y0 + r * p.pitchY, y0 + (r + 1) * p.pitchY, seamRight ? e : 0, seamRight ? w : e]);
+    }
+    const e = rowEdge(4, cols, p, seamRight);
+    bands.push([y0 + 5 * p.pitchY, h, seamRight ? e : 0, seamRight ? w : e]);
+    return bands;
+}
+
+function traceBands(bands) {
+    const pts = [[bands[0][2], bands[0][0]], [bands[0][3], bands[0][0]]];
+    let prev = bands[0];
+    for (let i = 1; i < bands.length; i++) {
+        const b = bands[i];
+        if (b[3] !== prev[3]) pts.push([prev[3], b[0]], [b[3], b[0]]);
+        prev = b;
+    }
+    const last = bands[bands.length - 1];
+    pts.push([last[3], last[1]], [last[2], last[1]]);
+    prev = last;
+    for (let i = bands.length - 2; i >= 0; i--) {
+        const b = bands[i];
+        if (b[2] !== prev[2]) pts.push([prev[2], b[1]], [b[2], b[1]]);
+        prev = b;
+    }
+    return pts;
+}
+
 function layout(p) {
     // The two halves are not mirror images in one respect: the left half carries the
     // seam wall on its right, the right half on its left, so the right half's key
@@ -107,10 +146,10 @@ function layout(p) {
     const plateY = cavY + C.pcb_top_bay + C.pcb_margin_y;
     const keys = [];
     for (let r = 0; r < 5; r++) {
-        // Left half: 7 columns, bottom row skips column 5.
+        // Left half: 6 columns, bottom row skips column 4.
         for (let c = 0; c < LEFT_COLS; c++) {
-            if (r === 4 && c === 5) continue;
-            const idx = r === 4 && c > 5 ? c - 1 : c;
+            if (r === 4 && c === 4) continue;
+            const idx = r === 4 && c > 4 ? c - 1 : c;
             keys.push({
                 x: plateX + c * p.pitchX + stagger[r] * p.pitchX + p.pitchX / 2,
                 y: plateY + r * p.pitchY + p.pitchY / 2,
@@ -162,13 +201,25 @@ function svg(p) {
 
     // Case outlines: the right half is 36 mm wider than the left (nine columns, not
     // seven) - drawing both at the left half's width is what made the docked width
-    // in the README wrong for two revisions.
-    for (const [half, w] of [[0, L.leftW], [1, L.rightW]]) {
-        out.push(`<rect x="${(PAD + (half ? L.leftW : 0) * S).toFixed(1)}" y="${PAD}" width="${(w * S).toFixed(1)}" height="${(totalL * S).toFixed(1)}" rx="${(C.fillet_r * S).toFixed(1)}" fill="${half ? '#e8ebef' : '#eef0f4'}" stroke="#9aa4b2" stroke-width="1.6"/>`);
+    // in the README wrong for two revisions. The outline steps with the row stagger.
+    for (const [half, cols, seamRight] of [[0, LEFT_COLS, true], [1, RIGHT_COLS, false]]) {
+        const ox = PAD + (half ? L.leftW : 0) * S;
+        const pts = traceBands(outlineBands(cols, p, seamRight))
+            .map(([x, y]) => `${(ox + x * S).toFixed(1)},${(PAD + y * S).toFixed(1)}`).join(' ');
+        out.push(`<polygon points="${pts}" fill="${half ? '#e8ebef' : '#eef0f4'}" stroke="#9aa4b2" stroke-width="1.6"/>`);
     }
-    // Plates
-    for (const [half, px, w] of [[0, L.plateX, LEFT_COLS], [1, L.leftW + L.rightPlateX, RIGHT_COLS]]) {
-        out.push(`<rect x="${(PAD + px * S).toFixed(1)}" y="${(PAD + L.plateY * S).toFixed(1)}" width="${(plateW(w, p) * S).toFixed(1)}" height="${(plateL(p) * S).toFixed(1)}" fill="#dfe4ea" stroke="#8b95a3" stroke-width="1.1" stroke-dasharray="4 3"/>`);
+    // Plates: the same bands, inset to the key field.
+    for (const [half, cols, px, seamRight] of [[0, LEFT_COLS, L.plateX, true], [1, RIGHT_COLS, L.leftW + L.rightPlateX, false]]) {
+        const inner = seamRight ? Math.max(...[0, 1, 2, 3, 4].map((r) => C.pcb_margin_x + (stagger[r] + cols) * p.pitchX))
+                                : C.pcb_margin_x;
+        const y0 = C.pcb_top_bay + C.pcb_margin_y;
+        // Trace the stepped boundary, not every band edge.
+        const path = traceBands([0, 1, 2, 3, 4].map((r) => {
+            const left = seamRight ? C.pcb_margin_x + stagger[r] * p.pitchX : inner;
+            const right = seamRight ? inner : C.pcb_margin_x + (stagger[r] + cols) * p.pitchX;
+            return [y0 + r * p.pitchY, y0 + (r + 1) * p.pitchY, left, right];
+        })).map(([x, y]) => `${(PAD + (px + x) * S).toFixed(1)},${(PAD + y * S).toFixed(1)}`).join(' ');
+        out.push(`<polygon points="${path}" fill="#dfe4ea" stroke="#8b95a3" stroke-width="1.1" stroke-dasharray="4 3"/>`);
     }
     // Seam marker
     out.push(`<line x1="${(PAD + L.leftW * S).toFixed(1)}" y1="${(PAD - 8)}" x2="${(PAD + L.leftW * S).toFixed(1)}" y2="${(PAD + totalL * S + 8).toFixed(1)}" stroke="#d9534f" stroke-width="2" stroke-dasharray="7 5"/>`);
@@ -199,7 +250,7 @@ function svg(p) {
     out.push(`<text x="${PAD}" y="${footY}" font-size="21" font-weight="600" fill="#1f2933">Interlock Ergo - ${p.name === 'choc' ? 'Kailh Choc v1' : 'Cherry MX'} layout, ${L.keys.length} keys</text>`);
     const lines = [
         `Case ${L.leftW.toFixed(1)} x ${(totalL).toFixed(1)} mm left, ${L.rightW.toFixed(1)} x ${(totalL).toFixed(1)} mm right, docked ${(totalW).toFixed(1)} mm wide. Plate ${p.plateT} mm, case ${p.depth} mm tall.`,
-        `Stagger ${stagger.join(' / ')} u keeps every letter column on its GH60 x; the 22.5 mm of shear it needs is the dead strip at each half's seam edge.`,
+        `Stagger ${stagger.join(' / ')} u is GH60's own stagger (its letters sit at 1 / 1.5 / 1.75 / 2.25 u), shifted 1 u right by the left function column; the 22.5 mm of shear it needs is the dead strip at each half's seam edge.`,
         `Centre of "5" to centre of "6": ${gap.toFixed(1)} mm (${(gap / p.pitchX).toFixed(1)} u) on every row - that is the docked centre gap, not ${(1.5).toFixed(1)} u.`,
         `Red outline marks the 6-Y-H-N column: 6, Y, H and N all fall on the right half.`
     ];

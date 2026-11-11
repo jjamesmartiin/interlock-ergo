@@ -5,7 +5,7 @@
 [![Firmware: ZMK](https://img.shields.io/badge/firmware-ZMK-purple.svg)](https://zmk.dev/)
 [![Hardware: KiCad + OpenSCAD](https://img.shields.io/badge/hardware-KiCad%20%7C%20OpenSCAD-green.svg)](pcb/)
 
-A wireless 76-key split ergonomic keyboard that **docks into one rigid keyboard**.
+A wireless 71-key split ergonomic keyboard that **docks into one rigid keyboard**.
 The two halves carry matching dovetail tabs and flush N52 magnets: lower one onto
 the other and the joint closes, lift one and they separate. Both halves talk to a
 USB dongle over low-power Bluetooth LE, so the host sees one ordinary USB HID
@@ -18,7 +18,7 @@ Two complete hardware variants are published, each with its own PCB and plate:
 | Pitch | 18.0 × 17.0 mm | 19.05 × 19.05 mm |
 | Plate | 1.2 mm | 1.5 mm |
 | Case height | 14.2 mm | 16.0 mm |
-| Case, docked | 386.2 × 137.6 mm | 405.6 × 147.8 mm |
+| Case, docked | 368.2 × 137.6 mm | 386.6 × 147.8 mm |
 
 ![Interlock Ergo, both halves docked](docs/images/hero.png)
 
@@ -38,10 +38,14 @@ Two complete hardware variants are published, each with its own PCB and plate:
    when you move between machines. It works in BIOS/UEFI and on laptops where
    Bluetooth is locked down by policy. Bluetooth profiles remain available
    (`&out OUT_BLE`) for phones and tablets.
-3. **76 keys, all 1u.** No stabilisers, no wide keys, no non-standard keycap sizes
+3. **71 keys, all 1u.** No stabilisers, no wide keys, no non-standard keycap sizes
    to hunt for. ANSI row stagger (0 / 0.5 / 0.75 / 1.25 / 0.25 u) puts every letter
-   column exactly where it sits on a GH60, so touch-typing transfers unchanged.
-4. **Rotary encoder + function column** on the left half.
+   column at the same offset it has on a GH60, so touch-typing transfers unchanged.
+   There is no function column: 6 columns on the left and 9 on the right make the
+   GH60's own 15 u, so `1`/`Q`/`A`/`Z` sit at GH60's 1.0/1.5/1.75/2.25 u exactly.
+   The PCB, plate and case share one band stack, so the silhouette steps with the
+   stagger and hugs the keys instead of being a rectangle with dead copper down one
+   side of every row. The seam face stays a straight plane - it is the joint.
 
 ![Layout](docs/images/layout.svg)
 
@@ -66,7 +70,7 @@ consequences of the straight seam that are worth knowing before you build:
 | ![Left case](docs/images/case-left.png) | ![Right case](docs/images/case-right.png) |
 | Left half: seam face with the two dovetail tabs, USB-C window with its overmold relief, and the open controller bay | Right half: blind dovetail sockets and flush magnet pockets in the seam wall |
 | ![Underside](docs/images/case-underside.png) | ![Plates](docs/images/plates.png) |
-| Underside: four M2 bosses with the PCB mounts, cell recess in the controller bay | Plates: 14.0 mm switch apertures, encoder through-hole on the left |
+| Underside: four M2 bosses with the PCB mounts, cell recess in the controller bay | Plates: 14.0 mm switch apertures, stepped outline |
 | ![Dongle](docs/images/dongle.png) | |
 
 Every STL in `cad/dist/` is gated by `tests/test_models.js`, which fails the
@@ -78,20 +82,19 @@ disagree with the stackup in `cad/interlock_params.scad`.
 ## Layout
 
 ```
-[Mute ] [Esc  ] [1    ] [2    ] [3    ] [4    ] [5    ]  ‖ [6    ] [7    ] [8    ] [9    ] [0    ] [-    ] [=    ] [Bksp ] [Home ]
-   [Play ] [Tab  ] [Q    ] [W    ] [E    ] [R    ] [T    ]  ‖ [Y    ] [U    ] [I    ] [O    ] [P    ] [[    ] []    ] [\    ] [End  ]
-     [PrtSc] [Caps ] [A    ] [S    ] [D    ] [F    ] [G    ]  ‖ [H    ] [J    ] [K    ] [L    ] [;    ] ['    ] [Enter]
-        [Calc ] [Shift] [Z    ] [X    ] [C    ] [V    ] [B    ]  ‖ [N    ] [M    ] [,    ] [.    ] [/    ] [Shift] [Up   ] [Del  ] [PgUp ]
-  [Fn2  ] [Ctrl ] [Win  ] [Alt  ] [Space] [Fn1  ]  ‖ [Space] [Alt  ] [Fn1  ] [Ctrl ] [Left ] [Down ] [Right] [PgDn ]
+[Esc  ] [1    ] [2    ] [3    ] [4    ] [5    ]  ‖ [6    ] [7    ] [8    ] [9    ] [0    ] [-    ] [=    ] [Bksp ] [Home ]
+   [Tab  ] [Q    ] [W    ] [E    ] [R    ] [T    ]  ‖ [Y    ] [U    ] [I    ] [O    ] [P    ] [[    ] []    ] [\    ] [End  ]
+     [Caps ] [A    ] [S    ] [D    ] [F    ] [G    ]  ‖ [H    ] [J    ] [K    ] [L    ] [;    ] ['    ] [Enter]
+        [Shift] [Z    ] [X    ] [C    ] [V    ] [B    ]  ‖ [N    ] [M    ] [,    ] [.    ] [/    ] [Shift] [Up   ] [Del  ] [PgUp ]
+  [Ctrl ] [Win  ] [Alt  ] [Space] [Fn1  ]  ‖ [Space] [Alt  ] [Fn1  ] [Ctrl ] [Left ] [Down ] [Right] [PgDn ]
 ```
 
 Printed by `node docs/generate_layout.js` straight out of the keymap, with each
-row indented by its ANSI stagger. 76 keys: 34 left + 42 right, in a 5 × 16 matrix.
+row indented by its ANSI stagger. 71 keys: 29 left + 42 right, in a 5 × 15 matrix.
 `docs/kle_layout.json` is the same layout as a Keyboard-Layout-Editor file, and
-`docs/matrix_and_pinout.md` has the electrical side. `Mute` is the encoder's push
-switch, which shares matrix position `RC(0,0)` and needs its own series diode; the
-`Mute / Play / PrtSc / Calc / Fn2` column is a plain function column, not user
-macros - there is no macro engine in the default keymap.
+`docs/matrix_and_pinout.md` has the electrical side. There is no function column
+and no rotary encoder: both went when the layout was pulled back onto GH60's columns,
+which is also why the left half is 29 keys and not 34.
 
 ---
 
@@ -111,7 +114,7 @@ macros - there is no macro engine in the default keymap.
 │   └── dist/                         # printable STLs (generated, not committed)
 ├── config/boards/shields/interlock_ergo/
 │   ├── Kconfig.shield, Kconfig.defconfig
-│   ├── interlock_ergo.dtsi           # 76-key matrix transform
+│   ├── interlock_ergo.dtsi           # 71-key matrix transform
 │   ├── interlock_ergo_{left,right,dongle}.overlay
 │   ├── interlock_ergo_{left,right,dongle}.conf
 │   └── interlock_ergo.keymap         # QWERTY, Nav/Fn, Media/BLE layers
@@ -172,10 +175,9 @@ Full sourcing with vendor links: [docs/bom.md](docs/bom.md).
 |---|---|---|
 | nice!nano v2 | 2 | one per half, castellated or socketed |
 | Seeed XIAO nRF52840 (BLE) | 1 | USB dongle (central) |
-| Kailh Choc v1 PG1350 **or** Cherry MX switches | 76 | pick one variant, not both |
-| Kailh hotswap sockets | 76 | Choc `CPG135001S30` / MX `CPG151101S11`. The pin holes are unplated: **hotswap only**, switches cannot be soldered in directly |
-| 1N4148W SOD-123 | 76 | one per key, plus one for the encoder |
-| EC11 rotary encoder | 1 | left half only |
+| Kailh Choc v1 PG1350 **or** Cherry MX switches | 71 | pick one variant, not both |
+| Kailh hotswap sockets | 71 | Choc `CPG135001S30` / MX `CPG151101S11`. The pin holes are unplated: **hotswap only**, switches cannot be soldered in directly |
+| 1N4148W SOD-123 | 71 | one per key |
 | MSK-12D19 slide switch | 2 | power, one per half |
 | JST-PH 2.0 | 2 | cell connector |
 | Protected LiPo pouch, LP402030 (4 × 20 × 30 mm cell) | 2 | ~200 mAh, **must** have a PCM — the PCM adds ~3.2 mm, so allow 34 mm overall |

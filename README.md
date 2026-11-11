@@ -1,6 +1,6 @@
 # Interlock Ergo
 
-[![Build ZMK Firmware](https://github.com/jamesm/interlock-ergo/actions/workflows/build-zmk.yml/badge.svg)](https://github.com/jamesm/interlock-ergo/actions/workflows/build-zmk.yml)
+[![Build ZMK Firmware](https://github.com/jjamesmartiin/interlock-ergo/actions/workflows/build-zmk.yml/badge.svg)](https://github.com/jjamesmartiin/interlock-ergo/actions/workflows/build-zmk.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Firmware: ZMK](https://img.shields.io/badge/firmware-ZMK-purple.svg)](https://zmk.dev/)
 [![Hardware: KiCad + OpenSCAD](https://img.shields.io/badge/hardware-KiCad%20%7C%20OpenSCAD-green.svg)](pcb/)

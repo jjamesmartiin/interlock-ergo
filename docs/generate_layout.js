@@ -43,7 +43,7 @@ const KEY_NAMES = {
     ESC: 'Esc', TAB: 'Tab', CLCK: 'Caps', SPACE: 'Space', RET: 'Enter', BSPC: 'Bksp',
     MINUS: '-', EQUAL: '=', LBKT: '[', RBKT: ']', BSLH: '\\', SEMI: ';', SQT: "'",
     COMMA: ',', DOT: '.', FSLH: '/', GRAVE: '`',
-    LSHFT: 'Shift', RSHFT: 'Shift', LCTRL: 'Ctrl', RCTRL: 'Ctrl', LGUI: 'Win', LALT: 'Alt', RALT: 'Alt',
+    LSHFT: 'Shift', RSHFT: 'Shift', LCTRL: 'Ctrl', RCTRL: 'Ctrl', LGUI: 'Win', RGUI: 'Win', LALT: 'Alt', RALT: 'Alt',
     UP: 'Up', DOWN: 'Down', LEFT: 'Left', RIGHT: 'Right',
     HOME: 'Home', END: 'End', DEL: 'Del', PG_UP: 'PgUp', PG_DN: 'PgDn', PSCRN: 'PrtSc',
     C_MUTE: 'Mute', C_PLAY_PAUSE: 'Play', C_AL_CALC: 'Calc',
@@ -71,11 +71,11 @@ const tokens = bindingBlock.match(/&[a-z0-9_]+(?:\s+[A-Z0-9_]+)*/gi) || [];
 // halves are one or two keys short. These counts are the same ones the keymap and
 // the matrix transform use.
 const LEFT_COLS = 6;
-const RIGHT_COLS = 9;
+const RIGHT_COLS = 8;
 const rows = [];
 let t = 0;
 const leftRowLen = [6, 6, 6, 6, 5];       // left bottom row skips one position
-const rightRowLen = [9, 9, 7, 9, 8];      // right home row ends at Enter, bottom at PgDn
+const rightRowLen = [8, 8, 7, 8, 8];      // right home row ends at Enter (7 keys)
 for (let r = 0; r < 5; r++) {
     const left = tokens.slice(t, t + leftRowLen[r]); t += leftRowLen[r];
     const right = tokens.slice(t, t + rightRowLen[r]); t += rightRowLen[r];
@@ -157,11 +157,10 @@ function layout(p) {
                 half: 'L', r, c
             });
         }
-        // Right half: 9 columns, shifted by the left case width.
+        // Right half: 8 columns, shifted by the left case width.
         let ri = 0;
         for (let c = 0; c < RIGHT_COLS; c++) {
-            if (r === 2 && (c === 7 || c === 8)) continue;
-            if (r === 4 && c === 8) continue;
+            if (r === 2 && c === 7) continue;
             keys.push({
                 x: leftW + rightPlateX + c * p.pitchX + stagger[r] * p.pitchX + p.pitchX / 2,
                 y: plateY + r * p.pitchY + p.pitchY / 2,

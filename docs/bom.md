@@ -16,7 +16,7 @@ This directory provides verified sourcing links, Manufacturer Part Numbers (MPN)
 | **Battery Connectors** | JST-PH 2.0mm 2-pin Right-Angle Header | 2 | S2B-PH-K-S | [DigiKey](https://www.digikey.com/en/products/detail/jst-sales-america-inc/S2B-PH-K-S/926626) | [LCSC C145955](https://www.lcsc.com/product-detail/JST_S2B-PH-K-S_C145955.html) | $0.20 |
 | **Controller Headers** | 2.54mm 1x12 female header, to socket the nice!nano (or castellated-solder it and skip these) | 4 | Generic 1x12 | [DigiKey](https://www.digikey.com/en/products/detail/amphenol-icc-fci/68000-112HLF/863830) | [LCSC C2908565](https://www.lcsc.com/product-detail/Female-Headers_Connfly-DS1021-1x12S21_C2908565.html) | $0.30 |
 | **Power Slide Switches** | SPDT Mini Slide Switch (MSK-12D19) | 2 | MSK-12D19 / SK-12D19 | [LCSC C432174](https://www.lcsc.com/product-detail/Slide-Switches_XKB-Enterprise-SK-12D19-G5-B_C432174.html) | [Typeractive](https://typeractive.xyz/products/spdt-switch) | $0.15 |
-| **Diodes (SMD)** | 1N4148W Switching Diode (SOD-123) | 71 | 1N4148W | [LCSC C81598](https://www.lcsc.com/product-detail/Diodes-General-Purpose_JCST-1N4148W_C81598.html) | [DigiKey](https://www.digikey.com/en/products/detail/diodes-incorporated/1N4148W-7-F/376281) | $0.02 |
+| **Diodes (SMD)** | 1N4148W Switching Diode (SOD-123) | 68 | 1N4148W | [LCSC C81598](https://www.lcsc.com/product-detail/Diodes-General-Purpose_JCST-1N4148W_C81598.html) | [DigiKey](https://www.digikey.com/en/products/detail/diodes-incorporated/1N4148W-7-F/376281) | $0.02 |
 
 ---
 
@@ -24,7 +24,7 @@ This directory provides verified sourcing links, Manufacturer Part Numbers (MPN)
 
 | Item | Description & Spec | Qty | MPN / Part # | Primary Source Link | Alternative Source | Est. Total |
 | :--- | :--- | :---: | :--- | :--- | :--- | :---: |
-| **Choc Sockets** | Kailh Choc v1 2-prong Hotswap Sockets | 71 | CPG135001S30 | [LCSC C5333465](https://www.lcsc.com/product-detail/Others_Kailh-CPG135001S30_C5333465.html) | [Typeractive Choc Sockets](https://typeractive.xyz/products/kailh-choc-hotswap-sockets) | $12.00 |
+| **Choc Sockets** | Kailh Choc v1 2-prong Hotswap Sockets | 68 | CPG135001S30 | [LCSC C5333465](https://www.lcsc.com/product-detail/Others_Kailh-CPG135001S30_C5333465.html) | [Typeractive Choc Sockets](https://typeractive.xyz/products/kailh-choc-hotswap-sockets) | $12.00 |
 | **Choc Switches** | Kailh Choc v1 Switches (Red Linear 50gf or Pro Red 35gf) | 80 | PG1350 | [Boardsource](https://boardsource.xyz/store/5e6bca927c9c053a479ff4b5) | [Chosfox](https://chosfox.com/products/kailh-choc-v1-switches) / [MKUltra](https://mkultra.click/kailh-choc-switches/) | $48.00 |
 | **Choc Keycaps** | MBK Choc PBT Keycap Set + Convex Thumbs | 1 set | MBK Choc | [Typeractive MBK Legend](https://typeractive.xyz/products/mbk-legend-keycaps) | [Boardsource MBK](https://boardsource.xyz/store/5f6cd6a73d9e035048d06748) | $35.00 – $50.00 |
 | **PCB Fab** | JLCPCB 2-Layer FR4 - order **left 3 pcs, right 2 pcs** (see 6. below) | 1 pair | Custom | [JLCPCB](https://jlcpcb.com/) | Upload `pcb/dist/*_choc_gerbers.zip` | $18.00 |
@@ -37,7 +37,7 @@ This directory provides verified sourcing links, Manufacturer Part Numbers (MPN)
 
 | Item | Description & Spec | Qty | MPN / Part # | Primary Source Link | Alternative Source | Est. Total |
 | :--- | :--- | :---: | :--- | :--- | :--- | :---: |
-| **MX Sockets** | Kailh MX Hotswap Sockets | 71 | CPG151101S11 | [LCSC C2800547](https://www.lcsc.com/product-detail/Others_Kailh-CPG151101S11_C2800547.html) | [NovelKeys](https://novelkeys.com/products/kailh-pcb-sockets) | $10.00 |
+| **MX Sockets** | Kailh MX Hotswap Sockets | 68 | CPG151101S11 | [LCSC C2800547](https://www.lcsc.com/product-detail/Others_Kailh-CPG151101S11_C2800547.html) | [NovelKeys](https://novelkeys.com/products/kailh-pcb-sockets) | $10.00 |
 | **MX Switches** | Gateron Milky Yellow / Kailh Box / Cherry MX | 80 | MX Style | [NovelKeys](https://novelkeys.com/products/gateron-milky-yellow-switches) | [Divinikey](https://divinikey.com/products/gateron-milky-yellow-pro-linear-switches) | $24.00 – $40.00 |
 | **MX Keycaps** | 65% PBT Cherry/OEM Keycap Set with Split Space | 1 set | MX Stem | [Amazon PBT 65% Split](https://www.amazon.com/dp/B09V7CQ22Q) | [Drop Skylight](https://drop.com/buy/drop-skylight-series-keycap-set) | $25.00 – $45.00 |
 | **PCB Fab** | JLCPCB 2-Layer FR4 - order **2 pcs of each half** (see 6. below) | 1 pair | Custom | [JLCPCB](https://jlcpcb.com/) | Upload `pcb/dist/*_mx_gerbers.zip` | $18.00 |

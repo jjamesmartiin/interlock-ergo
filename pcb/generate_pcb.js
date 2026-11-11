@@ -749,11 +749,7 @@ function generateKiCadPCB(opts) {
 
 
 
-    // Key definition matrix according to firmware dtsi (34 keys left, 42 keys right)
-    // Left: 7 cols x 5 rows. Row 4 skips col 5 (Space_L is 2.25u). Total = 34 keys.
-    // Right: Row 0 has cols 7..15 (9 keys); Row 1 has cols 7..15 (9 keys);
-    //        Row 2 has cols 7..13 (7 keys); Row 3 has cols 7..15 (9 keys);
-    //        Row 4 has cols 7..14 (8 keys). Total = 42 keys.
+    // Key definition matrix according to firmware dtsi (29 keys left, 39 keys right)
     const activeKeys = [];
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -761,8 +757,7 @@ function generateKiCadPCB(opts) {
                 if (r === 4 && c === 4) continue; // Skip omitted space position
                 activeKeys.push({ r, c });
             } else {
-                if (r === 2 && (c === 7 || c === 8)) continue; // Home row ends at Enter (7 keys)
-                if (r === 4 && c === 8) continue; // Bottom row has 8 keys (cols 7..14)
+                if (r === 2 && c === 7) continue; // Home row ends at Enter (7 keys)
                 activeKeys.push({ r, c });
             }
         }
@@ -921,9 +916,10 @@ function generateKiCadPCB(opts) {
         'RAW', 'GND', 'RST', 'VCC', 'D21', 'D20', 'D19', 'D18', 'D15', 'D14', 'D16', 'D10'
     ];
     // Mirrors the &pro_micro D-numbers in interlock_ergo_{left,right}.overlay:
-    // rows = pro_micro 4..8, columns on 18/15/14/16/10/1 (left) and 18/15/14/16/10/1/0/2/3
-    // (right), battery on RAW. No encoder: dropping the left function column took its
+    // rows = pro_micro 4..8, columns on 18/15/14/16/10/1 (left) and 18/15/14/16/10/1/0/2
+    // (right: cols 6..13), battery on RAW. No encoder: dropping the left function column took its
     // home (RC(0,0)), so pro_micro 21/20 and D0 on the left are simply unused pads.
+    // D3 on the right is also an unused pad now that the right half has 8 columns.
     const podSignals = side === 'left'
         ? {
             D1: 'COL5', D4: 'ROW0', D5: 'ROW1', D6: 'ROW2', D7: 'ROW3', D8: 'ROW4',
@@ -931,7 +927,7 @@ function generateKiCadPCB(opts) {
             RAW: 'RAW', GND: 'GND'
         }
         : {
-            D0: 'COL12', D1: 'COL11', D2: 'COL13', D3: 'COL14', D4: 'ROW0', D5: 'ROW1',
+            D0: 'COL12', D1: 'COL11', D2: 'COL13', D4: 'ROW0', D5: 'ROW1',
             D6: 'ROW2', D7: 'ROW3', D8: 'ROW4', D18: 'COL6', D15: 'COL7', D14: 'COL8',
             D16: 'COL9', D10: 'COL10', RAW: 'RAW', GND: 'GND'
         };
@@ -1278,7 +1274,7 @@ function generateKiCadPCB(opts) {
     fs.writeFileSync(bomFile, bomText, 'utf8');
 }
 
-// 1. Choc v1 Left (34 keys) & Right (42 keys)
+// 1. Choc v1 Left (29 keys) & Right (39 keys)
 generateKiCadPCB({
     variant: 'choc',
     side: 'left',
@@ -1292,14 +1288,14 @@ generateKiCadPCB({
 generateKiCadPCB({
     variant: 'choc',
     side: 'right',
-    cols: 9,
+    cols: 8,
     rows: 5,
     pitchX: 18.0,
     pitchY: 17.0,
     isChoc: true
 });
 
-// 2. MX Left (34 keys) & Right (42 keys)
+// 2. MX Left (29 keys) & Right (39 keys)
 generateKiCadPCB({
     variant: 'mx',
     side: 'left',
@@ -1313,7 +1309,7 @@ generateKiCadPCB({
 generateKiCadPCB({
     variant: 'mx',
     side: 'right',
-    cols: 9,
+    cols: 8,
     rows: 5,
     pitchX: 19.05,
     pitchY: 19.05,

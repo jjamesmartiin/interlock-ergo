@@ -91,8 +91,8 @@ function render(parts, opts) {
     // Camera basis: `dir` points from the target towards the eye.
     const a = (yaw * Math.PI) / 180, b = (pitch * Math.PI) / 180;
     const dir = norm([Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)]);
-    const right = norm(cross([0, 0, 1], dir));
-    const up = cross(dir, right);
+    const right = norm(cross(dir, [0, 0, 1]));
+    const up = cross(right, dir);
 
     // Fit the projected bounding box into the frame.
     let pxlo = Infinity, pxhi = -Infinity, pylo = Infinity, pyhi = -Infinity;
@@ -251,8 +251,10 @@ const caseW = (cols) => CHOC.wall + pcbW(cols) + CHOC.seamWall + CHOC.clearance;
 const caseL = () => 2 * CHOC.wall + pcbL() + CHOC.clearance;
 const cavX = CHOC.wall + CHOC.clearance / 2;
 const cavY = CHOC.wall + CHOC.clearance / 2;
+const rightCavX = CHOC.seamWall + CHOC.clearance / 2;
 const plateAt = () => [cavX + CHOC.margin, cavY + CHOC.topBay + CHOC.margin, CHOC.caseDepth - CHOC.plateT];
-const leftW = caseW(7);
+const rightPlateAt = () => [rightCavX + CHOC.margin, cavY + CHOC.topBay + CHOC.margin, CHOC.caseDepth - CHOC.plateT];
+const leftW = caseW(6);
 
 const scenes = {
     // Both halves docked - the product shot.
@@ -261,20 +263,19 @@ const scenes = {
             { tris: transform(loadStl(path.join(distDir, 'interlock_choc_left.stl')), {}), color: CASE },
             { tris: transform(loadStl(path.join(distDir, 'interlock_choc_right.stl')), { translate: [leftW, 0, 0] }), color: CASE_R },
             { tris: transform(loadStl(path.join(distDir, 'interlock_plate_choc_left.stl')), { translate: plateAt() }), color: PLATE },
-            { tris: transform(loadStl(path.join(distDir, 'interlock_plate_choc_right.stl')), { translate: [leftW + plateAt()[0], plateAt()[1], plateAt()[2]] }), color: PLATE }
+            { tris: transform(loadStl(path.join(distDir, 'interlock_plate_choc_right.stl')), { translate: [leftW + rightPlateAt()[0], rightPlateAt()[1], rightPlateAt()[2]] }), color: PLATE }
         ],
         opts: { yaw: 90, pitch: 38, width: 1600, height: 700, zoom: 1 }
     }),
 
-
     'case-left': () => ({
         parts: [{ tris: loadStl(path.join(distDir, 'interlock_choc_left.stl')), color: CASE }],
-        opts: { yaw: 118, pitch: 28, width: 1200, height: 820 }
+        opts: { yaw: 62, pitch: 28, width: 1200, height: 820 }
     }),
 
     'case-right': () => ({
         parts: [{ tris: loadStl(path.join(distDir, 'interlock_choc_right.stl')), color: CASE_R }],
-        opts: { yaw: 62, pitch: 28, width: 1200, height: 820 }
+        opts: { yaw: 118, pitch: 28, width: 1200, height: 820 }
     }),
 
     'case-underside': () => ({
@@ -285,9 +286,9 @@ const scenes = {
     plates: () => ({
         parts: [
             { tris: loadStl(path.join(distDir, 'interlock_plate_choc_left.stl')), color: PLATE },
-            { tris: transform(loadStl(path.join(distDir, 'interlock_plate_choc_right.stl')), { translate: [0, 95, 0] }), color: PLATE }
+            { tris: transform(loadStl(path.join(distDir, 'interlock_plate_choc_right.stl')), { translate: [145, 0, 0] }), color: PLATE }
         ],
-        opts: { yaw: 0, pitch: 89, width: 1300, height: 900, zoom: 0.95 }
+        opts: { yaw: 90, pitch: 89, width: 1300, height: 600, zoom: 0.95 }
     }),
 
     dongle: () => ({

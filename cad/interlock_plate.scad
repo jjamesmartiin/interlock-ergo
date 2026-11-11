@@ -36,10 +36,8 @@ module switch_plate(half) {
                 y0 = r * pitch_y;
                 if (half == "left" && r == 4 && c == 4) {
                     // No switch here: the left bottom row skips a position.
-                } else if (half == "right" && r == 2 && (c == 7 || c == 8)) {
+                } else if (half == "right" && r == 2 && c == 7) {
                     // Home row ends at Enter.
-                } else if (half == "right" && r == 4 && c == 8) {
-                    // Bottom row ends at Page Down.
                 } else {
                     translate([x0 + (pitch_x - cutout) / 2, y0 + (pitch_y - cutout) / 2, -1])
                         cube([cutout, cutout, plate_t + 2]);

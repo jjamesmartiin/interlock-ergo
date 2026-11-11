@@ -5,7 +5,9 @@
 [![Firmware: ZMK](https://img.shields.io/badge/firmware-ZMK-purple.svg)](https://zmk.dev/)
 [![Hardware: KiCad + OpenSCAD](https://img.shields.io/badge/hardware-KiCad%20%7C%20OpenSCAD-green.svg)](pcb/)
 
-A wireless 71-key split ergonomic keyboard that **docks into one rigid keyboard**.
+> **Disclaimer:** This project (firmware, PCB generation scripts, CAD models, and documentation) is an experimental keyboard design developed and maintained with AI assistance. Always verify schematics, board dimensions, gerber files, and dry-fit clearances before ordering physical fabrication or soldering components.
+
+A wireless 68-key split ergonomic keyboard that **docks into one rigid keyboard**.
 The two halves carry matching dovetail tabs and flush N52 magnets: lower one onto
 the other and the joint closes, lift one and they separate. Both halves talk to a
 USB dongle over low-power Bluetooth LE, so the host sees one ordinary USB HID
@@ -18,7 +20,7 @@ Two complete hardware variants are published, each with its own PCB and plate:
 | Pitch | 18.0 × 17.0 mm | 19.05 × 19.05 mm |
 | Plate | 1.2 mm | 1.5 mm |
 | Case height | 14.2 mm | 16.0 mm |
-| Case, docked | 368.2 × 137.6 mm | 386.6 × 147.8 mm |
+| Case, docked | 350.2 × 137.6 mm | 367.5 × 147.8 mm |
 
 ![Interlock Ergo, both halves docked](docs/images/hero.png)
 
@@ -38,11 +40,12 @@ Two complete hardware variants are published, each with its own PCB and plate:
    when you move between machines. It works in BIOS/UEFI and on laptops where
    Bluetooth is locked down by policy. Bluetooth profiles remain available
    (`&out OUT_BLE`) for phones and tablets.
-3. **71 keys, all 1u.** No stabilisers, no wide keys, no non-standard keycap sizes
+3. **68 keys, all 1u.** No stabilisers, no wide keys, no non-standard keycap sizes
    to hunt for. ANSI row stagger (0 / 0.5 / 0.75 / 1.25 / 0.25 u) puts every letter
    column at the same offset it has on a GH60, so touch-typing transfers unchanged.
-   There is no function column: 6 columns on the left and 9 on the right make the
-   GH60's own 15 u, so `1`/`Q`/`A`/`Z` sit at GH60's 1.0/1.5/1.75/2.25 u exactly.
+   There is no function column: 6 columns on the left and 8 on the right match a DZ60
+   split down the middle (between 5 and 6), with a true inverted-T arrow cluster on
+   the bottom right.
    The PCB, plate and case share one band stack, so the silhouette steps with the
    stagger and hugs the keys instead of being a rectangle with dead copper down one
    side of every row. The seam face stays a straight plane - it is the joint.
@@ -82,15 +85,15 @@ disagree with the stackup in `cad/interlock_params.scad`.
 ## Layout
 
 ```
-[Esc  ] [1    ] [2    ] [3    ] [4    ] [5    ]  ‖ [6    ] [7    ] [8    ] [9    ] [0    ] [-    ] [=    ] [Bksp ] [Home ]
-   [Tab  ] [Q    ] [W    ] [E    ] [R    ] [T    ]  ‖ [Y    ] [U    ] [I    ] [O    ] [P    ] [[    ] []    ] [\    ] [End  ]
+[Esc  ] [1    ] [2    ] [3    ] [4    ] [5    ]  ‖ [6    ] [7    ] [8    ] [9    ] [0    ] [-    ] [=    ] [Bksp ]
+   [Tab  ] [Q    ] [W    ] [E    ] [R    ] [T    ]  ‖ [Y    ] [U    ] [I    ] [O    ] [P    ] [[    ] []    ] [\    ]
      [Caps ] [A    ] [S    ] [D    ] [F    ] [G    ]  ‖ [H    ] [J    ] [K    ] [L    ] [;    ] ['    ] [Enter]
-        [Shift] [Z    ] [X    ] [C    ] [V    ] [B    ]  ‖ [N    ] [M    ] [,    ] [.    ] [/    ] [Shift] [Up   ] [Del  ] [PgUp ]
-  [Ctrl ] [Win  ] [Alt  ] [Space] [Fn1  ]  ‖ [Space] [Alt  ] [Fn1  ] [Ctrl ] [Left ] [Down ] [Right] [PgDn ]
+        [Shift] [Z    ] [X    ] [C    ] [V    ] [B    ]  ‖ [N    ] [M    ] [,    ] [.    ] [/    ] [Shift] [Up   ] [Del  ]
+  [Ctrl ] [Win  ] [Alt  ] [Space] [Fn1  ]  ‖ [Space] [Alt  ] [Fn1  ] [Win  ] [Ctrl ] [Left ] [Down ] [Right]
 ```
 
 Printed by `node docs/generate_layout.js` straight out of the keymap, with each
-row indented by its ANSI stagger. 71 keys: 29 left + 42 right, in a 5 × 15 matrix.
+row indented by its ANSI stagger. 68 keys: 29 left + 39 right, in a 5 × 14 matrix.
 `docs/kle_layout.json` is the same layout as a Keyboard-Layout-Editor file, and
 `docs/matrix_and_pinout.md` has the electrical side. There is no function column
 and no rotary encoder: both went when the layout was pulled back onto GH60's columns,
@@ -114,7 +117,7 @@ which is also why the left half is 29 keys and not 34.
 │   └── dist/                         # printable STLs (generated, not committed)
 ├── config/boards/shields/interlock_ergo/
 │   ├── Kconfig.shield, Kconfig.defconfig
-│   ├── interlock_ergo.dtsi           # 71-key matrix transform
+│   ├── interlock_ergo.dtsi           # 68-key matrix transform
 │   ├── interlock_ergo_{left,right,dongle}.overlay
 │   ├── interlock_ergo_{left,right,dongle}.conf
 │   └── interlock_ergo.keymap         # QWERTY, Nav/Fn, Media/BLE layers
@@ -175,9 +178,9 @@ Full sourcing with vendor links: [docs/bom.md](docs/bom.md).
 |---|---|---|
 | nice!nano v2 | 2 | one per half, castellated or socketed |
 | Seeed XIAO nRF52840 (BLE) | 1 | USB dongle (central) |
-| Kailh Choc v1 PG1350 **or** Cherry MX switches | 71 | pick one variant, not both |
-| Kailh hotswap sockets | 71 | Choc `CPG135001S30` / MX `CPG151101S11`. The pin holes are unplated: **hotswap only**, switches cannot be soldered in directly |
-| 1N4148W SOD-123 | 71 | one per key |
+| Kailh Choc v1 PG1350 **or** Cherry MX switches | 68 | pick one variant, not both |
+| Kailh hotswap sockets | 68 | Choc `CPG135001S30` / MX `CPG151101S11`. The pin holes are unplated: **hotswap only**, switches cannot be soldered in directly |
+| 1N4148W SOD-123 | 68 | one per key |
 | MSK-12D19 slide switch | 2 | power, one per half |
 | JST-PH 2.0 | 2 | cell connector |
 | Protected LiPo pouch, LP402030 (4 × 20 × 30 mm cell) | 2 | ~200 mAh, **must** have a PCM — the PCM adds ~3.2 mm, so allow 34 mm overall |
@@ -212,7 +215,7 @@ taller `standoff_h` in `cad/interlock_params.scad` and a re-print of both halves
    them with everything else (sockets, headers, JST, slide switch) - hand-soldering
    is cheaper than JLCPCB's per-order PCBA fees at this volume.
 5. Order both design variants only if you intend to build both; each half is a
-   separate board because the halves are 34 and 42 keys and cannot be reversible.
+   separate board because the halves are 29 and 39 keys and cannot be reversible.
 
 ### Printing
 
@@ -221,8 +224,8 @@ taller `standoff_h` in `cad/interlock_params.scad` and a re-print of both halves
   so nothing needs support; only the two magnet pockets bridge, over 3.2 mm.
 - Plates: 1.2 mm (Choc) / 1.5 mm (MX) exactly. Do not scale.
 - Dongle: `dongle_case_base.stl` + `dongle_case_lid.stl`.
-- Bed size: the left case is 178 × 138 mm, the right 211 × 138 mm, so a 220 × 220
-  bed fits the left half and a 256 × 256 bed fits both.
+- Bed size: the left case is 160 × 138 mm, the right 193 × 138 mm (203 for MX), so a 220 × 220
+  bed fits either half and a 256 × 256 bed fits both.
 
 ### Assembly
 

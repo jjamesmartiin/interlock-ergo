@@ -2,7 +2,7 @@
 
 ## 1. Layout and why the columns are where they are
 
-71 keys, all 1u. No stabilisers, no wide keys: every keycap is a size any Choc or
+68 keys, all 1u. No stabilisers, no wide keys: every keycap is a size any Choc or
 MX set already contains, which removes the single most annoying sourcing problem in
 small-batch keyboard building.
 
@@ -10,7 +10,8 @@ The ANSI feel comes from the row stagger, not from wide modifiers. Each whole ro
 shifted by 0 / 0.5 / 0.75 / 1.25 / 0.25 u so that every letter column lands on its
 GH60 column position, so touch typists keep their muscle memory. The offsets are
 GH60's exactly (0 / 0.5 / 0.75 / 1.25 u against GH60's 1 / 1.5 / 1.75 / 2.25 u
-letters) and so are the absolute columns: 6 left + 9 right = GH60's 15 u. That is
+letters) and the split is a DZ60 split down the middle: 6 left + 8 right (14 columns total),
+with a standard inverted-T arrow cluster on the bottom right. That is
 why there is no function column and no rotary encoder - both lived in a seventh
 left column, and dropping it is what buys the parity. The price is that the
 stagger needs 22.5 mm of horizontal shear, which a straight seam converts into dead

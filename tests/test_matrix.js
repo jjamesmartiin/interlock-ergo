@@ -17,7 +17,7 @@ const totalMatrixKeys = rcMatches.length;
 // Check for duplicate RC coordinates
 const uniqueRCs = new Set(rcMatches.map(rc => rc.replace(/\s+/g, '')));
 assert.strictEqual(uniqueRCs.size, rcMatches.length, `Duplicate RC coordinate found in dtsi! (${uniqueRCs.size} unique vs ${rcMatches.length} total)`);
-assert.strictEqual(totalMatrixKeys, 71, `Expected exactly 71 keys in dtsi, got ${totalMatrixKeys}`);
+assert.strictEqual(totalMatrixKeys, 68, `Expected exactly 68 keys in dtsi, got ${totalMatrixKeys}`);
 console.log(`Found ${totalMatrixKeys} unique matrix positions in default_transform.`);
 
 // 2. Verify Right Overlay has col-offset on &default_transform (NOT in kscan0)

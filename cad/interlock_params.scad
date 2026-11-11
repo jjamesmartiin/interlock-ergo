@@ -69,8 +69,8 @@ stagger_max_u = 1.25;
 pcb_margin_x  = 8.0;    // PCB edge margin around the key field
 pcb_margin_y  = 8.0;
 pcb_top_bay   = 28.0;   // controller bay at the top of the PCB
-cols_left     = 6;   // + 9 on the right = GH60's 15u; no function column
-cols_right    = 9;
+cols_left     = 6;   // 6 left + 8 right = 14 cols (DZ60 split down the middle)
+cols_right    = 8;
 rows          = 5;
 
 function pcb_w(cols, pitch_x) = cols * pitch_x + 2 * pcb_margin_x + stagger_max_u * pitch_x;

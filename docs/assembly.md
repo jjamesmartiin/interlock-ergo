@@ -47,7 +47,7 @@ will have two halves that push each other apart.
 
 The switch sockets and the diodes go on the **bottom** of the PCB, opposite the
 switch side. Both are in the board's JLCPCB BOM/CPL (`pcb/dist/bom_*.csv`,
-`cpl_*.csv`), so the assembler can place all 71 of each; the three 1 mm fiducials
+`cpl_*.csv`), so the assembler can place all 68 of each; the three 1 mm fiducials
 the placement needs are on that side too, in `pcb/dist/gerbers_*/`.
 
 1. Diodes first: 1N4148W in SOD-123, cathode (the banded end) toward the row net.

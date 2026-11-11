@@ -50,14 +50,13 @@ assert(Math.abs(TOP_BAY - c.pcb_top_bay) < 1e-9, 'pcb_top_bay drift between gene
 assert(Math.abs(1.25 - c.stagger_max_u) < 1e-9, 'stagger_max_u drift');
 
 // Which matrix positions actually carry a switch: the left bottom row skips one, and
-// the right half's home row and bottom row stop short.
+// the right half's home row stops short at Enter.
 function hasSwitch(side, r, col) {
     if (side === 'left') {
         if (r === 4 && col === 4) return false;   // omitted space position
         return true;
     }
-    if (r === 2 && (col === 7 || col === 8)) return false;  // home row ends at Enter
-    if (r === 4 && col === 8) return false;                 // bottom row ends at PgDn
+    if (r === 2 && col === 7) return false;       // home row ends at Enter (7 keys)
     return true;
 }
 

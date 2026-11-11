@@ -47,13 +47,13 @@ The right half hosts a 5-row × 8-column matrix.
 - **Col 8:**  `&pro_micro 14` -> `P1.11` — 8, I, K, Comma, Mo(1)
 - **Col 9:**  `&pro_micro 16` -> `P0.10` — 9, O, L, Dot, RGui
 - **Col 10:** `&pro_micro 10` -> `P0.09` — 0, P, Semicolon, Slash, RCtrl
-- **Col 11:** `&pro_micro 1`  -> `P0.06` — Minus, [, Quote, RShift, Left Arrow
-- **Col 12:** `&pro_micro 0`  -> `P0.08` — Equal, ], Enter, Up Arrow, Down Arrow
+- **Col 11:** `&pro_micro 1`  -> `P0.06` — Minus, [, Quote, Up Arrow, Left Arrow
+- **Col 12:** `&pro_micro 0`  -> `P0.08` — Equal, ], Enter, RShift, Down Arrow
 - **Col 13:** `&pro_micro 2`  -> `P0.17` — Bksp, Backslash, Delete, Right Arrow (no home-row key)
 
-Unused on the right: `&pro_micro 3` (P0.20). Its pad exists on the PCB with no net.
-Notice the inverted-T arrow cluster: Up at Col 12 is directly above Down at Col 12,
-flanked by Left at Col 11 (under RShift) and Right at Col 13 (under Delete).
+Unused on the right: `&pro_micro 3` (P0.20), `&pro_micro 9` (P1.06), `&pro_micro 19` (P0.02), `20` and `21`. Their pads exist on the PCB with no net.
+Notice the inverted-T arrow cluster: Up at Col 11 (x=6.25u) is directly above Down at Col 12 (x=6.25u),
+flanked by Left at Col 11 (x=5.25u, under /) and Right at Col 13 (x=7.25u, under RShift). Del sits outboard at x=8.25u.
 
 ---
 

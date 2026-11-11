@@ -9,7 +9,10 @@ const shieldDir = path.join(rootDir, 'config/boards/shields/interlock_ergo');
 
 // 1. Verify dtsi & unique RC mapping
 const dtsiContent = fs.readFileSync(path.join(shieldDir, 'interlock_ergo.dtsi'), 'utf8');
-const rcMatches = dtsiContent.match(/RC\(\s*\d+\s*,\s*\d+\s*\)/g);
+const mapStart = dtsiContent.indexOf('map = <');
+const mapEnd = dtsiContent.indexOf('>;', mapStart);
+const mapBlock = dtsiContent.slice(mapStart, mapEnd);
+const rcMatches = mapBlock.match(/RC\(\s*\d+\s*,\s*\d+\s*\)/g);
 const mapRCs = [...rcMatches].map((rc) => rc.replace(/[^\d,]/g, ''));
 assert(rcMatches, 'Failed to find RC entries in dtsi');
 const totalMatrixKeys = rcMatches.length;
@@ -94,6 +97,31 @@ while ((match = layerRegex.exec(keymapContent)) !== null) {
         assert(at(1, seam).includes('T'), `Expected &kp T at the last left column, got ${at(1, seam)}`);
         assert(at(2, seam).includes('G'), `Expected &kp G at the last left column, got ${at(2, seam)}`);
         assert(at(3, seam).includes('B'), `Expected &kp B at the last left column, got ${at(3, seam)}`);
+
+        // Assert arrow cluster geometry: Up sits directly above Down in an inverted-T
+        const colOffset = 6;
+        const keyX = (r, c) => (c - colOffset) + scadStagger[r];
+        const findKeyRC = (keyName) => {
+            for (let i = 0; i < tokens.length; i++) {
+                if (tokens[i] === keyName) {
+                    const [r, c] = mapRCs[i].split(',').map(Number);
+                    return { r, c, x: keyX(r, c) };
+                }
+            }
+            throw new Error(`Key ${keyName} not found in default layer`);
+        };
+        const up = findKeyRC('&kp UP');
+        const down = findKeyRC('&kp DOWN');
+        const left = findKeyRC('&kp LEFT');
+        const right = findKeyRC('&kp RIGHT');
+
+        assert(Math.abs(up.x - down.x) < 1e-6,
+            `Arrow cluster error: UP (x=${up.x}u) is not directly above DOWN (x=${down.x}u)`);
+        assert(Math.abs(down.x - left.x - 1.0) < 1e-6,
+            `Arrow cluster error: LEFT (x=${left.x}u) is not 1u left of DOWN (x=${down.x}u)`);
+        assert(Math.abs(right.x - down.x - 1.0) < 1e-6,
+            `Arrow cluster error: RIGHT (x=${right.x}u) is not 1u right of DOWN (x=${down.x}u)`);
+        console.log(`✓ Arrow cluster forms exact inverted-T: Up/Down aligned at x=${up.x}u, Left at ${left.x}u, Right at ${right.x}u.`);
     }
 }
 assert(layerCount >= 3, 'Expected at least 3 layers in keymap');

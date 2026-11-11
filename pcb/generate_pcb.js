@@ -742,7 +742,7 @@ function generateKiCadPCB(opts) {
         { id: 9, name: 'BAT_PLUS' }
     ];
 
-    const colOffset = side === 'left' ? 0 : 6;   // 6 left columns + 9 right = GH60's 15
+    const colOffset = side === 'left' ? 0 : 6;   // 6 left columns + 8 right = 14 cols (DZ60 split)
     for (let c = 0; c < cols; c++) {
         nets.push({ id: nets.length, name: `COL${colOffset + c}` });
     }

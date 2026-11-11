@@ -21,7 +21,7 @@
                 &kp H            &kp J     &kp K    &kp L    &kp SEMI  &kp SQT   &kp RET
 
                 &kp LSHFT        &kp Z     &kp X    &kp C    &kp V     &kp B
-                &kp N            &kp M     &kp COMMA &kp DOT &kp FSLH  &kp RSHFT &kp UP    &kp DEL
+                &kp N            &kp M     &kp COMMA &kp DOT &kp FSLH  &kp UP    &kp RSHFT &kp DEL
 
                 &kp LCTRL        &kp LGUI  &kp LALT &kp SPACE           &mo 1
                 &kp SPACE        &kp RALT  &mo 1    &kp RGUI  &kp RCTRL &kp LEFT &kp DOWN  &kp RIGHT
@@ -40,7 +40,7 @@
                 &trans       &trans    &trans   &trans   &trans    &trans    &trans
 
                 &trans       &trans    &trans   &trans   &trans    &trans
-                &trans       &trans    &trans   &trans   &trans    &trans    &kp PG_UP &trans
+                &trans       &trans    &trans   &trans   &trans    &kp PG_UP &trans    &trans
 
                 &trans       &trans    &trans   &trans             &mo 2
                 &trans       &trans    &trans   &trans   &trans    &kp HOME  &kp PG_DN &kp END

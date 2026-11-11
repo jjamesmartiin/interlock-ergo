@@ -89,6 +89,10 @@ function render(parts, opts) {
     const centre = opts.target || [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
 
     // Camera basis: `dir` points from the target towards the eye.
+    // In OpenSCAD/KiCad world space: +X is typist right, +Y is toward typist (front edge),
+    // and +Z is vertical. When looking from front (+Y looking toward -Y), `dir` has +Y and +Z.
+    // Screen right is cross(dir, [0, 0, 1]) -> +X (typist right).
+    // Screen up is cross(right, dir) -> -Y, +Z (toward back edge / ceiling).
     const a = (yaw * Math.PI) / 180, b = (pitch * Math.PI) / 180;
     const dir = norm([Math.cos(b) * Math.cos(a), Math.cos(b) * Math.sin(a), Math.sin(b)]);
     const right = norm(cross(dir, [0, 0, 1]));

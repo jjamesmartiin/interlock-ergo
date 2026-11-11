@@ -21,8 +21,8 @@
             , <&pro_micro 14 GPIO_ACTIVE_HIGH>  /* Col 8: 8, I, K, comma, Fn1 */
             , <&pro_micro 16 GPIO_ACTIVE_HIGH>  /* Col 9: 9, O, L, dot, Win */
             , <&pro_micro 10 GPIO_ACTIVE_HIGH>  /* Col 10: 0, P, semi, slash, Ctrl */
-            , <&pro_micro 1 GPIO_ACTIVE_HIGH>   /* Col 11: minus, lbkt, quote, RShift, Left */
-            , <&pro_micro 0 GPIO_ACTIVE_HIGH>   /* Col 12: equal, rbkt, Enter, Up, Down */
+            , <&pro_micro 1 GPIO_ACTIVE_HIGH>   /* Col 11: minus, lbkt, quote, Up, Left */
+            , <&pro_micro 0 GPIO_ACTIVE_HIGH>   /* Col 12: equal, rbkt, Enter, RShift, Down */
             , <&pro_micro 2 GPIO_ACTIVE_HIGH>   /* Col 13: bspc, bslh, Del, Right */
             ;
     };

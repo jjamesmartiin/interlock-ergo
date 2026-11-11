@@ -110,9 +110,9 @@
 <rect x="1198.2" y="432.2" width="76.7" height="76.7" rx="10.7" fill="#ffffff" stroke="#7c8794" stroke-width="1"/>
 <text x="1236.6" y="481.1" font-size="29.2" text-anchor="middle" fill="#26313f">/</text>
 <rect x="1277.0" y="432.2" width="76.7" height="76.7" rx="10.7" fill="#ffffff" stroke="#7c8794" stroke-width="1"/>
-<text x="1315.3" y="479.4" font-size="24.6" text-anchor="middle" fill="#26313f">Shift</text>
+<text x="1315.3" y="481.1" font-size="29.2" text-anchor="middle" fill="#26313f">Up</text>
 <rect x="1355.7" y="432.2" width="76.7" height="76.7" rx="10.7" fill="#ffffff" stroke="#7c8794" stroke-width="1"/>
-<text x="1394.1" y="481.1" font-size="29.2" text-anchor="middle" fill="#26313f">Up</text>
+<text x="1394.1" y="479.4" font-size="24.6" text-anchor="middle" fill="#26313f">Shift</text>
 <rect x="1434.4" y="432.2" width="76.7" height="76.7" rx="10.7" fill="#ffffff" stroke="#7c8794" stroke-width="1"/>
 <text x="1472.8" y="481.1" font-size="29.2" text-anchor="middle" fill="#26313f">Del</text>
 <rect x="108.5" y="506.6" width="76.7" height="76.7" rx="10.7" fill="#fdfdfd" stroke="#7c8794" stroke-width="1"/>
@@ -148,7 +148,7 @@
 <text x="731.3" y="311.9" font-size="15" fill="#c0392b">seam - dovetail + magnets</text>
 <text x="34" y="669.9508852084524" font-size="21" font-weight="600" fill="#1f2933">Interlock Ergo - Kailh Choc v1 layout, 68 keys</text>
 <text x="34" y="695.9508852084524" font-size="14.5" fill="#4a5561">Case 157.1 x 137.6 mm left, 193.1 x 137.6 mm right, docked 350.2 mm wide. Plate 1.2 mm, case 14.2 mm tall.</text>
-<text x="34" y="716.9508852084524" font-size="14.5" fill="#4a5561">Stagger 0 / 0.5 / 0.75 / 1.25 / 0.25 u is GH60's own stagger (its letters sit at 1 / 1.5 / 1.75 / 2.25 u), shifted 1 u right by the left function column; the 22.5 mm of shear it needs is the dead strip at each half's seam edge.</text>
+<text x="34" y="716.9508852084524" font-size="14.5" fill="#4a5561">Stagger 0 / 0.5 / 0.75 / 1.25 / 0.25 u is GH60's own stagger (letters sit at 1 / 1.5 / 1.75 / 2.25 u); the 22.5 mm of shear it needs is the dead strip at each half's seam edge.</text>
 <text x="34" y="737.9508852084524" font-size="14.5" fill="#4a5561">Centre of "5" to centre of "6": 69.1 mm (3.8 u) on every row - that is the docked centre gap, not 1.5 u.</text>
 <text x="34" y="758.9508852084524" font-size="14.5" fill="#4a5561">Red outline marks the 6-Y-H-N column: 6, Y, H and N all fall on the right half.</text>
 </svg>

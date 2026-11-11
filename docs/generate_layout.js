@@ -198,9 +198,8 @@ function svg(p) {
     out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H.toFixed(0)}" viewBox="0 0 ${W} ${H.toFixed(0)}" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">`);
     out.push(`<rect width="${W}" height="${H.toFixed(0)}" fill="#f6f7f9"/>`);
 
-    // Case outlines: the right half is 36 mm wider than the left (nine columns, not
-    // seven) - drawing both at the left half's width is what made the docked width
-    // in the README wrong for two revisions. The outline steps with the row stagger.
+    // Case outlines: the right half is 36 mm wider than the left (eight columns, not
+    // six: 2 x 18 mm pitch). The outline steps with the row stagger.
     for (const [half, cols, seamRight] of [[0, LEFT_COLS, true], [1, RIGHT_COLS, false]]) {
         const ox = PAD + (half ? L.leftW : 0) * S;
         const pts = traceBands(outlineBands(cols, p, seamRight))
@@ -249,7 +248,7 @@ function svg(p) {
     out.push(`<text x="${PAD}" y="${footY}" font-size="21" font-weight="600" fill="#1f2933">Interlock Ergo - ${p.name === 'choc' ? 'Kailh Choc v1' : 'Cherry MX'} layout, ${L.keys.length} keys</text>`);
     const lines = [
         `Case ${L.leftW.toFixed(1)} x ${(totalL).toFixed(1)} mm left, ${L.rightW.toFixed(1)} x ${(totalL).toFixed(1)} mm right, docked ${(totalW).toFixed(1)} mm wide. Plate ${p.plateT} mm, case ${p.depth} mm tall.`,
-        `Stagger ${stagger.join(' / ')} u is GH60's own stagger (its letters sit at 1 / 1.5 / 1.75 / 2.25 u), shifted 1 u right by the left function column; the 22.5 mm of shear it needs is the dead strip at each half's seam edge.`,
+        `Stagger ${stagger.join(' / ')} u is GH60's own stagger (letters sit at 1 / 1.5 / 1.75 / 2.25 u); the 22.5 mm of shear it needs is the dead strip at each half's seam edge.`,
         `Centre of "5" to centre of "6": ${gap.toFixed(1)} mm (${(gap / p.pitchX).toFixed(1)} u) on every row - that is the docked centre gap, not ${(1.5).toFixed(1)} u.`,
         `Red outline marks the 6-Y-H-N column: 6, Y, H and N all fall on the right half.`
     ];

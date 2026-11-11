@@ -20,8 +20,10 @@
          *   - Col 7..13: 7..0, symbols, enter, inverted-T arrow cluster
          *
          * 14 columns = DZ60 split down the middle (6 left + 8 right).
-         * Right half arrow cluster: Up at Col 12 directly over Down at Col 12,
-         * flanked by Left at Col 11 and Right at Col 13.
+         * Right half inverted-T arrow cluster:
+         *   - Up at RC(3,11) [x=6.25u] sits directly above Down at RC(4,12) [x=6.25u]
+         *   - Left at RC(4,11) [x=5.25u] sits directly under / at RC(3,10) [x=5.25u]
+         *   - Right at RC(4,13) [x=7.25u] sits directly under RShift at RC(3,12) [x=7.25u]
          */
         map = <
             RC(0,0) RC(0,1) RC(0,2) RC(0,3) RC(0,4) RC(0,5)     RC(0,6) RC(0,7) RC(0,8) RC(0,9) RC(0,10) RC(0,11) RC(0,12) RC(0,13)

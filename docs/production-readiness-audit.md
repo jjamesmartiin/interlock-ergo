@@ -1,5 +1,7 @@
 # Production readiness audit — current tree
 
+> **Historical Note:** This document records the readiness audit conducted during initial development (at commit `b9604fd`). The layout has since been refined from 71 keys to 68 keys (6 left + 8 right, matching DZ60 split down the middle with an inverted-T arrow cluster). Current ground-truth numbers are maintained in `README.md` and `docs/matrix_and_pinout.md`.
+
 **Reviewed:** working tree after the second remediation pass on top of `c552ae3`
 **Method:** read every file, re-ran every gate, recomputed the geometry numerically,
 solved the stackup by hand against the actual part dimensions, checked the firmware
